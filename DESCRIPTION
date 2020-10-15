@@ -29,6 +29,7 @@ Imports:
     shinyjs (>= 1.1),
     shinycssloaders (>= 0.2.0),
     shinyFiles (>= 0.8.0),
+    shinyalert (>= 1.0),
     magrittr,
     methods
 RoxygenNote: 7.1.1

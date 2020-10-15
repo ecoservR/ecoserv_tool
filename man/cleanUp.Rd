@@ -7,14 +7,10 @@
 cleanUp(scratch = scratch_path)
 }
 \arguments{
-\item{folder}{Folder where spatial file or files are stored}
-
-\item{layer}{Layer name if several layers present in folder}
-
-\item{filetype}{File format, either "gpkg" for geopackage or "shp" for shapefile}
+\item{scratch}{The scratch (temporary) folder where outputs are saved}
 }
 \value{
-A list of spatial files
+Nothing; deletes contents of the scratch folder.
 }
 \description{
 This function deletes the contents of the scratch folder and uses garbage collection to return memory to the OS.

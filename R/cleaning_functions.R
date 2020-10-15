@@ -10,14 +10,14 @@
 #'
 #' This function deletes the contents of the scratch folder and uses garbage collection to return memory to the OS.
 
-#' @param folder Folder where spatial file or files are stored
-#' @param layer Layer name if several layers present in folder
-#' @param filetype File format, either "gpkg" for geopackage or "shp" for shapefile
-#' @return A list of spatial files
+#' @param scratch The scratch (temporary) folder where outputs are saved
+#' @return Nothing; deletes contents of the scratch folder.
 #' @export
 #'
 cleanUp <- function(scratch = scratch_path){
 # scratch is the path to the temporary folder
+
+   if (grepl("ecoservR", scratch)){ # ONLY delete scratch folder if it has ecoservR in the name (which it should automatically). Extra stopgap to prevent accidentally deleting an important folder
 
 invisible(  # this just prevents message being printed to the console
    file.remove(dir(    # delete all files
@@ -26,6 +26,7 @@ invisible(  # this just prevents message being printed to the console
       recursive = TRUE
    ))
 )
+      }
 
 invisible(  # remove folders too
    unlink(list.dirs(file.path(scratch), recursive = FALSE),  # FALSE here essential otherwise would delete scratch folder itself

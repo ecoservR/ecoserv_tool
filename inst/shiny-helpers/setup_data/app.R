@@ -174,6 +174,8 @@ ui <- fluidPage(
 
    shiny::titlePanel("Select your data inputs"),
 
+   p("For each data input you want to use, please navigate to the", strong("folder"), "containing the relevant files. These folders should be self-contained, i.e. not include other datasets. Sub-folders are allowed (e.g. mastermap tiles). Please refer to user guide for more information."),
+
    shiny::fluidRow(
 shiny::column(6,
    definePathsUI(id = "button1",
@@ -567,7 +569,16 @@ for (i in 1:nrow(rv$df)){
 
    rv$df[i, ][["realnames"]] <- checkNames(
       rv$df[i, ][["path"]],
-      if (!is.na(rv$df[i, ][["layer"]])){rv$df[i, ][["layer"]]} else NULL,
+      if (!is.na(rv$df[i, ][["layer"]])){
+         # the layer name is a regular expression, not the actual name always, so we do a search
+         # for the first layer containing it
+         searchpattern <- rv$df[i, ][["layer"]]
+         actuallayers <- sf::st_layers(list.files(rv$df[i, ][["path"]],
+                                                  pattern = guessFiletype(rv$df[i, ][["path"]]),
+                                                  full.names = TRUE, recursive = TRUE)[[1]])[[1]]
+
+         actuallayers[grepl(searchpattern, actuallayers)][[1]] # make sure we get just one layer
+         } else NULL,
       rv$df[i, ][["cols"]][[1]],
       rv$df[i, ][["dataset"]]
    )
