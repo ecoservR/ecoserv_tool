@@ -1,0 +1,34 @@
+Package: ecoservR
+Type: Package
+Title: A Toolkit for Mapping Ecosystem Services
+Version: 0.1.0
+Authors@R: c(
+    person("Sandra", "Angers-Blondin", email = "s.angers-blondin@ljmu.ac.uk", role = c("aut","cre")),
+    person("Karl", "Buskdieker", role = "aut"),
+    person("Chloe", "Bellamy", role = "aut"),
+    person("Jim", "Rouquette", role = "aut"),
+    person("Alison", "Holt", role = "aut"),
+    person("Colm", "Bowe", role = "aut")
+    )
+Description: EcoservR is a toolkit for generating an environmental baseline (in the UK) using widely available national datasets.
+    Seven ecosystem services can currently be mapped: carbon storage, air purification, water purification,
+    pollination, climate regulation, noise regulation, and access to nature.
+    Use four spaces when indenting paragraphs within the Description.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Imports:
+    dplyr (>= 1.0.1),
+    sf (>= 0.9.3),
+    rgdal(>= 1.5.16),
+    lwgeom (>= 0.2.4),
+    raster (>= 3.3.10),
+    fasterize (>= 1.0.1),
+    tabularaster (>= 0.6.0),
+    shiny (>= 1.5.0),
+    shinyjs (>= 1.1),
+    shinycssloaders (>= 0.2.0),
+    shinyFiles (>= 0.8.0),
+    magrittr,
+    methods
+RoxygenNote: 7.1.1
