@@ -2,19 +2,24 @@ require(magrittr)
 
 ### Custom functions
 
-checkNames <- function(folder, layer = NULL, user_names, name = NULL){
+checkAttrNames <- function(folder, layerstring = NULL, user_names, name = NULL){
 
    # Using st_read with a query of 0 rows only returns the headers and metadata.
 
    type <- guessFiletype(folder)  # identify file extension
 
-   if (is.null(layer)){
-      layer <- sf::st_layers(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]])[[1]] # if layer not specified, probably just one and we check the first
+   firstfile <- list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]]
+
+   if (is.null(layerstring)){ # if layer not specified, probably just one and we check the first
+      layername <- sf::st_layers(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]])[[1]]
+   } else {
+      layername <- sf::st_layers(firstfile)[[1]]
+      layername <- layername[grepl(layerstring, layername)]
    }
 
    # import 0 rows from the data but returns headers
-   actualnames <- sf::st_read(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]],
-                          layer = layer, query = paste("select * from \"", layer, "\" limit 0", sep=""),
+   actualnames <- sf::st_read(firstfile,
+                          layer = layername, query = paste("select * from \"", layername, "\" limit 0", sep=""),
                           quiet = TRUE)
 
    return(list(names(actualnames)))
@@ -386,15 +391,15 @@ datalog <- reactive({
          paths$hedge()
       ),
       layer = c("TopographicArea",
-                NA,
-                NA,
+                NA_character_,
+                NA_character_,
                 "GreenspaceSite",
-                NA,
-                NA,
-                NA,
-                NA,
-                NA,
-                NA),
+                NA_character_,
+                NA_character_,
+                NA_character_,
+                NA_character_,
+                NA_character_,
+                NA_character_),
       cols = c(
          mm = list(c("TOID" = "TOID", # mmcols
                "PhysicalLevel" = "PhysicalLevel",
@@ -562,22 +567,17 @@ observe({
 # This observer registers the real attributes in the user's data
 observe({
    if(all(unlist(validlayers()))){
-   req(rv$df)
+   #req(rv$df)
 
 for (i in 1:nrow(rv$df)){
    if (!is.na(rv$df[i, ][["path"]])){
 
-   rv$df[i, ][["realnames"]] <- checkNames(
+   rv$df[i, ][["realnames"]] <- checkAttrNames(
       rv$df[i, ][["path"]],
-      if (!is.na(rv$df[i, ][["layer"]])){
+      layerstring = if (!is.na(rv$df[i, ][["layer"]])){
          # the layer name is a regular expression, not the actual name always, so we do a search
          # for the first layer containing it
-         searchpattern <- rv$df[i, ][["layer"]]
-         actuallayers <- sf::st_layers(list.files(rv$df[i, ][["path"]],
-                                                  pattern = guessFiletype(rv$df[i, ][["path"]]),
-                                                  full.names = TRUE, recursive = TRUE)[[1]])[[1]]
-
-         actuallayers[grepl(searchpattern, actuallayers)][[1]] # make sure we get just one layer
+         rv$df[i, ][["layer"]]
          } else NULL,
       rv$df[i, ][["cols"]][[1]],
       rv$df[i, ][["dataset"]]
