@@ -331,7 +331,6 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    # Low-priority step before April
 
 
-
    # SAVE UPDATED MAP ----------------------------------------------------------------------------
 
    # Save the list of spatial objects as an RDS object (quicker to reload in R)
@@ -350,6 +349,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                   round(difftime(timeB, timeA, units = "mins"), digits = 1), " minutes. Ready for
                   processing."))
    return({
+      ## returns the objects in the global environment
       mm <<- mm
       studyAreaBuffer <<- studyAreaBuffer
    })

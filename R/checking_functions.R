@@ -82,6 +82,52 @@ checkcrs <- function(x, target = 27700){
    return(x)
 }
 
+#' Check Geometry
+#'
+#' This function checks the geometry type of a spatial object, and casts to the desired geometry (POLYGON or POINT). Also makes the geometries valid. Used mostly before operations requiring single-part polygon geometry.
+
+#' @param x Simple features spatial object, or list of sf objects
+#' @param target EPSG code of desired end projection, default British National Grid, or another sf object whose projection you want to match
+#' @return sf object with desired geometry type.
+#' @export
+
+checkgeometry <- function(x, target = "POLYGON"){
+
+   if (!target %in% c("POLYGON", "POINT")) stop("Target geometry must be POLYGON or POINT")
+
+   # if we're dealing with a list, only perform on the elements that need it
+   if (inherits(x, "list")){
+
+      x <- lapply(x,
+                  function(y){
+                     if (sf::st_geometry_type(y, by_geometry = FALSE) == target){
+                        return(sf::st_make_valid(y))  # if tile already has the right geometry, do nothing
+                     } else {  # otherwise validate geometry and cast to target (multi to single part)
+                        y <- sf::st_make_valid(y) %>%
+                           # remove geometries that are valid but incorrect type (e.g line and points from polygon clipping)
+                           dplyr::filter(sf::st_is(., if(target == "POLYGON"){
+                              c("POLYGON","MULTIPOLYGON")} else {c("POINT","MULTIPOINT")})) %>%
+                           sf::st_cast(to = ifelse(target == "POLYGON", "MULTIPOLYGON", "MULTIPOINT")) %>%
+                           sf::st_cast(to = target, warn = FALSE)
+                        return(y)
+                     }
+                  })
+
+   } else if(inherits(x, "sf")){
+      if (sf::st_geometry_type(x, by_geometry = FALSE) != target){
+         x <- sf::st_make_valid(x) %>%
+            # remove geometries that are valid but incorrect type (e.g line and points from polygon clipping)
+            dplyr::filter(st_is(., if(target == "POLYGON"){
+               c("POLYGON","MULTIPOLYGON")} else {c("POINT","MULTIPOINT")})) %>%
+            sf::st_cast(to = ifelse(target == "POLYGON", "MULTIPOLYGON", "MULTIPOINT")) %>%
+            sf::st_cast(to = target, warn = FALSE)} else {
+               x <- sf::st_make_valid(x)
+            }
+   }
+   return(x)
+}
+
+
 
 #' Remove Duplicated Polygons
 #'
@@ -123,3 +169,7 @@ removeDuplicPoly <- function(list, ID){
    return(list)
 
 } # end of function
+
+
+
+

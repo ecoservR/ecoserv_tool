@@ -101,6 +101,9 @@ if (exists("green")){
    green <- suppressWarnings(  # forcing the crs for compatibility in clipping function
          lapply(green, function(x) sf::st_set_crs(x, 27700)))
 
+   ## Make sure features are clean before cropping
+
+   green <- checkgeometry(green, "POLYGON")
 
    ## Crop each tile to study area
    #(the loop is written so that only polygons falling on the edge are clipped)
@@ -171,10 +174,14 @@ if (exists("green")){
 
       opengreen <- opengreen %>%
          dplyr::select(id, op_function) %>%           # keep only needed cols
-         faster_intersect(., studyAreaBuffer) %>%     # crop to study area
-         sf::st_make_valid() %>%                          # check and repair geometry
-         sf::st_cast(to = "MULTIPOLYGON") %>%
-         sf::st_cast(to = "POLYGON", warn = FALSE)        # equivalent of multi-part to single part
+         faster_intersect(., studyAreaBuffer)
+
+
+      opengreen <- checkgeometry(opengreen, "POLYGON")  # check validity and cast to polygon
+      # %>%     # crop to study area
+      #    sf::st_make_valid() %>%                          # check and repair geometry
+      #    sf::st_cast(to = "MULTIPOLYGON") %>%
+      #    sf::st_cast(to = "POLYGON", warn = FALSE)        # equivalent of multi-part to single part
 
 
 # RASTERIZE OPEN GREENSPACE -------------------------------------------------------------------
