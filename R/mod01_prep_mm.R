@@ -233,7 +233,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
          for (i in 1:length(mm)){
             message("Assigning grid reference to tile ", i)
             ## For a given tile, find out which grid references polygons belong to
-            index <- st_intersects(st_geometry(grid), st_geometry(mm[[i]]))  # create index
+            index <- sf::st_intersects(sf::st_geometry(grid), sf::st_geometry(mm[[i]]))  # create index
             names(index) <- grid$TILE_NAME  # add tile names
             index <- index[lengths(index) > 0]  # drop empty tiles
 
