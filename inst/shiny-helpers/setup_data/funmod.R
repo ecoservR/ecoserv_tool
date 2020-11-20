@@ -1,10 +1,10 @@
 ### Custom functions
 
-checkAttrNames <- function(folder, layerstring = NULL, user_names, name = NULL){
+checkAttrNames <- function(folder, type = "shp", layerstring = NULL, user_names, name = NULL){
 
    # Using st_read with a query of 0 rows only returns the headers and metadata.
 
-   type <- guessFiletype(folder)  # identify file extension
+  # type <- ecoservR::guessFiletype(folder)  # identify file extension
 
    files <- list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)
 
@@ -39,37 +39,37 @@ if (is.null(layername)) stop("Could not find layer with specified name in this f
 }
 
 
+## REvised filetype funtion to also detect rasters
+
 guessFiletype <- function(path){
 
-   if (!dir.exists(path)) stop("Folder not found. Please check directory path.")
+   if (!is.na(path) && path != "NA" && !is.null(path)){ # if the path is not NA, we check (otherwise return NA to be filtered out)
 
-   if (length(list.files(path, pattern = ".shp", recursive = TRUE)) > 0 &
-       length(list.files(path, pattern = ".gpkg", recursive = TRUE)) ==  0){
+   if (!dir.exists(path)){
+      detected <- "error folder"
+   } else {
 
-      return("shp")} else
+   ## Get list of all (unique) file extensions and subset to accepted formats only
 
-         if (length(list.files(path, pattern = ".shp", recursive = TRUE)) == 0
-             & length(list.files(path, pattern = ".gpkg", recursive = TRUE)) > 0){
+   formats <- c(".shp$", ".gpkg$", ".json$", ".tif", ".asc$")
 
-            return("gpkg")
+   detected <- list.files(path, pattern = paste(formats, collapse = "|"), recursive = TRUE) %>% # all files with ending
+      tools::file_ext() %>% unique()  # get unique extensions
 
-         } else
-
-            if (length(list.files(path, pattern = ".shp", recursive = TRUE)) == 0 &
-                length(list.files(path, pattern = ".gpkg", recursive = TRUE)) == 0){
-
-               stop("No spatial files found. (Must be shapefile or geopackage)")
-
-            } else
-
-               if (length(list.files(path, pattern = ".shp", recursive = TRUE)) > 0 &
-                   length(list.files(path, pattern = ".gpkg", recursive = TRUE)) > 0){
-                  stop("Files must be either shapefiles or geopackage, not both.")
-               }
+   if (length(detected) == 0) {
+      detected <- "error no"} else
+         if (length(detected) > 1){
+      detected <- "error multiple"
+         }
+   }
+   } else {
+      detected <- NA_character_
+   }
+   return(detected)
 
 }
 
-
+guessFiletypeV <- Vectorize(guessFiletype, "path", USE.NAMES = FALSE)
 
 
 ## MODULE TO CAPTURE A PATH --------------------
@@ -117,7 +117,7 @@ definePaths <- function(input, output, session) {
 }
 
 
-## MODULE TO POP UP A MODAL FOR PATHS ------
+## MODULE TO POP UP A MODAL FOR LAYER NAMES ------
 
 # Modal module UI  #  NO NEED FOR A UI
 # modalModuleUI <- function(id) {
@@ -153,12 +153,67 @@ modalModule <- function(input, output, session,
    # Verify input and prompt further or close on button click
    observeEvent(input$ok, {
 
-      # Check that data object exists and is data frame.
-      if (all(unlist(lapply(searchlist, function(x) any(grepl(input$entertext,x)))))
+      # Check that data object exists and is data frame - don't allow empty string
+      if (!is.null(input$entertext) && !input$entertext %in% c("", " ") &&
+          all(unlist(lapply(searchlist, function(x) any(grepl(input$entertext,x)))))
       ){
 
          # all good
          newname$good <- input$entertext
+         removeModal()
+
+      } else {
+         showModal(myModal(failed = TRUE))
+      }
+   })
+
+   return(reactive(newname$good))
+}
+
+
+
+## MODULE TO POP UP A MODAL FOR ATTRIBUTES ------
+
+# Modal module server
+attrPopupModule <- function(input, output, session,
+                        dataset = NULL,  # dataset name
+                        attrname = "attribute", # attribute name
+                        searchlist) {  # the actual attribute names extracted from dataset
+
+
+   searchlist <- unlist(searchlist)  # the rv$realnames comes as a list
+
+   myModal <- function(failed = FALSE) {
+      ns <- session$ns
+      modalDialog(
+         selectInput(ns("selectattr"),
+                     paste0("How is ", dataset, " attribute ", attrname," named in your dataset?"),
+                     choices = searchlist,
+                     selected = searchlist[agrep(attrname, searchlist)]  # pre-select closest match
+
+         ),
+         if (failed)
+            div(tags$b("Invalid name, try again", style = "color: red;")),
+         actionButton(ns("ok"), "OK"),
+         easyClose = FALSE,
+         footer = NULL)
+   }
+
+   newname <- reactiveValues(good = NULL)
+
+
+   showModal(myModal())
+
+
+   # Verify input and prompt further or close on button click
+   observeEvent(input$ok, {
+
+      # Check that data object exists and is data frame - don't allow empty string
+      if (!is.null(input$selectattr) && any(grepl(input$selectattr, searchlist))
+      ){
+
+         # all good
+         newname$good <- input$selectattr
          removeModal()
 
       } else {
