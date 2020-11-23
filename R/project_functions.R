@@ -122,7 +122,12 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
     mytest <- identical(success, latest)
 
 
-    if (!mytest){  # if last success and latest file clash:
+    if (mytest){
+
+       mm <- readRDS(success)  # they're identical so load mm
+
+    } else {
+       # if last success and latest file clash:
 
        if (isFALSE(trustlog)){  # give priority to the latest file
 
@@ -140,8 +145,8 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 
     } # end of file clash resolution
 
-   } else {  # if nothing recorded in the log
-      mm <- readRDS(filelist)
+   } else {  # if nothing recorded in the log get latest
+      mm <- readRDS(latest)
     }
 
 
@@ -179,7 +184,7 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
                   paste0(included, collapse = " \n"),
                   ". \n\n Now you can add: \n",
                   paste0(toadd, collapse = "\n"),
-                  ". \n"))
+                  "\n"))
 
    return({
       ## returns the objects in the global environment

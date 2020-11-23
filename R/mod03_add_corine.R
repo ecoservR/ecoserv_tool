@@ -150,6 +150,9 @@ if (!is.na(corinepath) & !is.null(corinepath)){
    } else {
 
 corine <- raster::raster(filelist)
+suppressWarnings({
+raster::crs(corine) <- "+init=epsg:3035"  # force raster to have CORINE CRS (European)
+})
 
 rm(filelist)
  # no need to import key as we can call corine_lookup_raster when we need it
@@ -165,7 +168,7 @@ rm(filelist)
 
 ex <- sf::st_as_sf(as(1.25*raster::extent(studyAreaBuffer), "SpatialPolygons")) %>% # create polygon out of study area extent
          sf::st_set_crs(sf::st_crs(studyAreaBuffer)) %>%  # set its crs to enable transfo
-         sf::st_transform(raster::crs(corine))  # project it in Corine's projection
+         sf::st_transform(3035)  # project it in Corine's projection (EPSG:3035)
 
 corine <- raster::writeRaster(
          raster::crop(corine, ex),  # cropping corine data to this extent
@@ -178,12 +181,26 @@ corine <- raster::projectRaster(corine, crs = "+init=epsg:27700", method="ngb",
 
 # Mask to study area -----
 
-corine <- raster::writeRaster(
-         raster::mask(corine, studyAreaBuffer),
-         filename = file.path(scratch_path, "corine"),
-         overwrite = TRUE)
+# corine <- raster::writeRaster(
+#          raster::mask(corine, studyAreaBuffer),
+#          filename = file.path(scratch_path, "corine"),
+#          overwrite = TRUE)
 
 
+## Split into grid squares
+
+SAgrid <- suppressWarnings(sf::st_intersection(grid, sf::st_geometry(studyAreaBuffer)) %>%
+                              sf::st_make) # clip grid to study area
+SAgrid$TILE_NAME <- droplevels(SAgrid$TILE_NAME)  # keep only relevant tiles
+
+corine_list <- vector(mode = "list", length = length(SAgrid))
+   ## somehow lapply breaks so using a loop instead to chop up corine into named tiles
+
+for (i in 1:length(SAgrid)){
+   corine_list[[i]] <- raster::crop(corine, SAgrid[i,]) %>% raster::mask(SAgrid[i,])
+}
+
+names(corine_list) <- SAgrid$TILE_NAME
 
 # Update MasterMap with CORINE field ----------------------------------------------------------
 
@@ -192,7 +209,15 @@ message("Extracting Corine data...")
    # Add new column with the main land cover class in each polygon
    # This takes some time to run
 
-   mm <- lapply(mm, function(x) extractRaster(sf = x, rast = corine, fun = "majority", newcol = "corine"))
+   #mm <- lapply(mm, function(x) extractRaster(sf = x, rast = corine, fun = "majority", newcol = "corine"))
+
+## With named tiles we can extract more efficiently
+
+   mm <- mapply(function(x, n) extractRaster(x, corine_list, fun = "majority", tile = n, newcol = "corine"),
+                x = mm,
+                n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
+                SIMPLIFY = FALSE)  # absolutely necessary
+
 
    # Replace numeric codes with text, using the builtin lookup table
 
