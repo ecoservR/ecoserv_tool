@@ -279,6 +279,13 @@ opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
 
    rm(key)
 
+   # Update the project log with the information that map was updated
+
+   projectLog$last_success <- "MM_02.RDS"
+
+   updateProjectLog(projectLog) # save revised log
+
+
    # and delete scratch folder
    cleanUp(scratch_path)
 

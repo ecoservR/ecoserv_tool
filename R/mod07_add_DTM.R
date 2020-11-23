@@ -115,6 +115,12 @@ if (length(dtm) == 1){
 
       saveRDS(mm, file.path(output_temp, paste0(title,"_MM_07.RDS")))
 
+      # Update the project log with the information that map was updated
+
+      projectLog$last_success <- "MM_07.RDS"
+
+      updateProjectLog(projectLog) # save revised log
+
       # and delete contents of scratch folder
       cleanUp(scratch_path)
 

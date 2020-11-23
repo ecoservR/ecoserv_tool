@@ -116,6 +116,13 @@ crome$lucode <- dplyr::recode(crome$lucode, !!!crome_lookup, .default = as.facto
 
    saveRDS(mm, file.path(output_temp, paste0(title, "_MM_06.RDS")))
 
+
+   # Update the project log with the information that map was updated
+
+   projectLog$last_success <- "MM_06.RDS"
+
+   updateProjectLog(projectLog) # save revised log
+
    # and delete contents of scratch folder
    cleanUp(scratch_path)
 

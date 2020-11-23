@@ -339,6 +339,9 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    # Update the project log with the information that map was updated
 
+   projectLog$SAbuffer <- file.path(output_temp,
+                                    paste(title, "_studyAreaBuffer_",studybuffer,"m.gpkg", sep=""))
+
    projectLog$last_success <- "MM_01.RDS"
 
    updateProjectLog(projectLog) # save revised log
@@ -350,8 +353,10 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                   processing."))
    return({
       ## returns the objects in the global environment
+      invisible({
       mm <<- mm
       studyAreaBuffer <<- studyAreaBuffer
+      })
    })
 
    on.exit(invisible(gc())) # garbage collection - return some memory to computer

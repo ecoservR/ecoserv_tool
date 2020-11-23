@@ -33,7 +33,7 @@ add_corine <- function(mm = parent.frame()$mm,
    corinepath <- projectLog$df[projectLog$df$dataset == "corine", ][["path"]]  # path to corine data, if available
 
 
-if (!is.na(corine) & !is.null(corine)){
+if (!is.na(corinepath) & !is.null(corinepath)){
 
    # this will automatically determine the file extension of corine data (raster or vector)
    corinetype <- if (any(grepl(".tif", list.files(corinepath)))){"tif"} else
@@ -135,12 +135,23 @@ if (!is.na(corine) & !is.null(corine)){
 
       rm(key)
 
-} else if (corinetype == "tif"){ # begin workflow for raster version
+} else if (corinetype %in% c("tif", "asc")){ # begin workflow for raster version
 
-# Import corine
+## Import corine raster ------
 
-corine <- raster::raster(corinepath)
+# find the raster in the folder
 
+   filelist <- list.files(pattern = corinetype,  corinepath, recursive = TRUE, full.names = TRUE)
+
+   if (length(filelist) > 1) {
+      stop("More than one raster file found for CORINE. Make sure folder only contains one tif file.")
+   } else if (length(filelist) == 0){
+      stop("No raster file found for CORINE")
+   } else {
+
+corine <- raster::raster(filelist)
+
+rm(filelist)
  # no need to import key as we can call corine_lookup_raster when we need it
 
 
@@ -154,7 +165,7 @@ corine <- raster::raster(corinepath)
 
 ex <- sf::st_as_sf(as(1.25*raster::extent(studyAreaBuffer), "SpatialPolygons")) %>% # create polygon out of study area extent
          sf::st_set_crs(sf::st_crs(studyAreaBuffer)) %>%  # set its crs to enable transfo
-         sf::st_transform(sp::crs(corine))  # project it in Corine's projection
+         sf::st_transform(raster::crs(corine))  # project it in Corine's projection
 
 corine <- raster::writeRaster(
          raster::crop(corine, ex),  # cropping corine data to this extent
@@ -190,6 +201,9 @@ message("Extracting Corine data...")
    # remove objects
    rm(corine, ex)
 
+   }
+
+
    } # end of workflow for raster version
 
 
@@ -197,6 +211,13 @@ message("Extracting Corine data...")
    # SAVE UPDATED MASTER MAP ---------------------------------------------------------------------
 
    saveRDS(mm, file.path(output_temp, paste0(title, "_MM_03.RDS")))
+
+
+   # Update the project log with the information that map was updated
+
+   projectLog$last_success <- "MM_03.RDS"
+
+   updateProjectLog(projectLog) # save revised log
 
    # and delete contents of scratch folder
    cleanUp(scratch_path)

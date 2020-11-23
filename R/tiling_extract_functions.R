@@ -314,7 +314,7 @@ else {  # Old method (for compatibility with NCS for a while)
    # Create sf extent polygon to compare to raster
    xsf <- as(raster::extent(sf), "SpatialPolygons") %>%
       sf::st_as_sf() %>%
-      sf::st_set_crs(st_crs(sf))
+      sf::st_set_crs(sf::st_crs(sf))
 
    ### The core processing steps -----
    ## An index of cells and polygons is created and used
@@ -327,7 +327,7 @@ else {  # Old method (for compatibility with NCS for a while)
 
       # create the raster extent polygon for checking intersection
       ex <- sf::st_as_sf(as(raster::extent(r), "SpatialPolygons")) %>%
-         sf::st_set_crs(st_crs(sf))   # caveat: rasters must always be OSGB grid ref
+         sf::st_set_crs(sf::st_crs(sf))   # caveat: rasters must always be OSGB grid ref
 
       if(sf::st_crs(ex) != sf::st_crs(xsf)){ex <- sf::st_transform(ex, sf::st_crs(xsf))}
 
@@ -413,7 +413,7 @@ else {  # Old method (for compatibility with NCS for a while)
 
       } # end of "belongs" condition
 
-      message(paste("Extracted tile", i, "of", length(rast), "into basemap.", sep = " "))
+      message(paste("Extracting data...", sep = " "))
 
    } # end of loop
 

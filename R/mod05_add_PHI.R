@@ -103,6 +103,12 @@ add_PHI <- function(mm = parent.frame()$mm,
 
       saveRDS(mm, file.path(output_temp, paste0(title, "_MM_05.RDS")))
 
+      # Update the project log with the information that map was updated
+
+      projectLog$last_success <- "MM_05.RDS"
+
+      updateProjectLog(projectLog) # save revised log
+
       # remove objects
       rm(key)
 
