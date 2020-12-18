@@ -92,7 +92,7 @@ capacity_pollination <- function(x, studyArea, res = 5,
    # Now we know there is at least one raster in the folder; list them
 
    dtm <- list.files(dtm, # folder with DTM tiles
-                     pattern = c('.asc$', '.tif$'),
+                     pattern = paste0(c('.asc$', '.tif$'), collapse ="|"),
                      all.files=TRUE, full.names=TRUE,
                      recursive = TRUE)
 
