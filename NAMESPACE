@@ -1,2 +1,4 @@
 exportPattern("^[[:alpha:]]+")
 importFrom(magrittr,"%>%")
+importFrom("methods", "as")
+importFrom("stats", "setNames")

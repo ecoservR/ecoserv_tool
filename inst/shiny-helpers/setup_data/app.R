@@ -636,7 +636,8 @@ observeEvent(input$setproj, {
 
    final_log <- list(
       title = gsub(" ", "_", input$projtitle),
-      output_temp = paths$proj(),
+      projpath = paths$proj(),
+      output_temp = file.path(paths$proj(), "intermediary"),
       df = rv$df, # add back the datasets we're not using
       parameters = reactiveValuesToList(params)
    )

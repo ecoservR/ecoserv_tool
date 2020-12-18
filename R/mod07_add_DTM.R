@@ -84,12 +84,11 @@ if (length(dtm) == 1){
       message("Extracting DTM data...")
 
       ## Here we need to use the old workflow that allows for any number of tiles as we don't know what they are (could be Terrain 5: 5 km tiles, or Terrain 50, etc, and do not necessarily match the 10x10km tiles)
-      mm <- lapply(mm, function(x) extractRaster(x, dtm, fun = "mean", newcol = "elev"))
 
-      # mm <- mapply(function(x, n) extractRaster(x, dtm, fun = "mean", tile = NULL, newcol = "elev"),
-      #              x = mm,
-      #              n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
-      #              SIMPLIFY = FALSE)  # absolutely necessary
+      mm <- mapply(function(x, n) extractRaster(x, dtm, fun = "mean", tile = NULL, newcol = "elev"),
+                   x = mm,
+                   n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
+                   SIMPLIFY = FALSE)  # absolutely necessary
 
 
 

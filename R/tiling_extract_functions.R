@@ -34,24 +34,16 @@ prepTiles <- function(mm, vect, studyArea = studyAreaBuffer, value){
             vect[[value[i]]] <- as.factor(vect[[value[i]]])
          }
 
-         # Factor levels must be dropped from the whole dataset before splitting
+         if(!class(vect[[value[i]]]) %in% c("double", "numeric", "integer")){ # can only drop levels from factors
 
-         vect[[value[i]]] <- droplevels(vect[[value[i]]])
-
+            vect[[value[i]]] <- droplevels(vect[[value[i]]])
+         }
       }
 
    } else {
       vect <- sf::st_geometry(vect) %>% sf::st_as_sf() # if no attribute supplied, we only need the geometry
    }
 
-
-   # Check if the raster would fit in memory
-
-   if (isTRUE(raster::canProcessInMemory(raster::raster(ex = raster::extent(vect), res = 2)))){
-
-      vect <- list(vect) # fits in memory so just putting it in the final list
-
-   } else { # The vector file needs tiling. Let's do that.
 
       # Create polygons representing boxes around each mm tile
       mmex <- lapply(mm, function(x)
@@ -77,7 +69,6 @@ prepTiles <- function(mm, vect, studyArea = studyAreaBuffer, value){
       vect <- split(vect, vect$OStile)
 
 
-   } # end of tiling methods
 
 
    ## If a tile is empty, remove it
@@ -227,7 +218,7 @@ sf[newcol] <- NA
 ## This is the fastest way but will only work if mm and rast are named lists
 ## with a matching OS 10x10km grid reference code.
 
-if (!is.null(tile)){
+if (!is.null(tile) & !is.null(names(rast))){
 
    message("Extracting values for tile ", tile)
 

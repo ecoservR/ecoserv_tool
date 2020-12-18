@@ -84,7 +84,7 @@ checkcrs <- function(x, target = 27700){
 
 #' Check Geometry
 #'
-#' This function checks the geometry type of a spatial object, and casts to the desired geometry (POLYGON or POINT). Also makes the geometries valid. Used mostly before operations requiring single-part polygon geometry.
+#' This function checks the geometry type of a spatial object, and casts to the desired geometry (POLYGON or POINT). Also makes the geometries valid. Used mostly before operations requiring single-part polygon geometry. If intersections return linestrings or points, those are removed.
 
 #' @param x Simple features spatial object, or list of sf objects
 #' @param target EPSG code of desired end projection, default British National Grid, or another sf object whose projection you want to match
@@ -117,7 +117,7 @@ checkgeometry <- function(x, target = "POLYGON"){
       if (sf::st_geometry_type(x, by_geometry = FALSE) != target){
          x <- sf::st_make_valid(x) %>%
             # remove geometries that are valid but incorrect type (e.g line and points from polygon clipping)
-            dplyr::filter(st_is(., if(target == "POLYGON"){
+            dplyr::filter(sf::st_is(., if(target == "POLYGON"){
                c("POLYGON","MULTIPOLYGON")} else {c("POINT","MULTIPOINT")})) %>%
             sf::st_cast(to = ifelse(target == "POLYGON", "MULTIPOLYGON", "MULTIPOINT")) %>%
             sf::st_cast(to = target, warn = FALSE)} else {

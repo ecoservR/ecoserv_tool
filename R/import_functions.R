@@ -119,3 +119,46 @@ if (length(list.files(path, pattern = ".shp", recursive = TRUE)) > 0 &
 
 
 
+#' Import Designated Areas
+#'
+#' Not intended to be called by user. Used in the accessible nature model to bring in external datasets in an automated way.
+
+#' @param path Folder where files are stored
+#' @param studyArea The study area outline to clip the data to
+#' @param dataset A character string giving the name of the dataset; used for error messages
+#' @return A sf dataframe ready to be used by the model. If no geometries occur in the study area, returns NULL.
+#' @export
+importDesignatedAreas <- function(path, studyArea, dataset){
+
+   ### Checks
+
+   if (!dir.exists(path)) stop(paste(dataset, " folder not found. Please check directory path.", sep = ""))
+
+
+   # load files into a list
+   message("Importing ", dataset)
+   df <- loadSpatial(path, filetype = guessFiletype(path))   # requires custom functions to be loaded
+
+   df <- lapply(df, function(x)
+      sf::st_geometry(x) %>%  # drop everything but geometry
+         sf::st_as_sf() %>%
+         sf::st_transform(27700))  # make sure they're all in OSGB
+
+   df <- df[sapply(df, function(x) nrow(x) > 0)]
+   # merge all layers with observations and then crop to study area
+
+   df <- do.call(rbind, df)
+   df <- sf::st_intersection(df, sf::st_geometry(studyArea))
+
+
+   if (nrow(df) == 0){ # if no features after intersection, ignore
+      message(paste("No occurrence of", dataset, "in study area. Ignoring this step."))
+      return(NULL)
+   } else {
+      return(df)
+   }
+}
+
+
+
+
