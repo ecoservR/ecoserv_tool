@@ -9,7 +9,7 @@ capacity_pollination(
   studyArea,
   res = 5,
   dist = 20,
-  elev = "elev",
+  elev = NULL,
   DTM = NULL,
   elev_threshold = 250,
   projectLog = parent.frame()$projectLog,

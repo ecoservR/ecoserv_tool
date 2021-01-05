@@ -25,7 +25,7 @@
 #'
 capacity_pollination <- function(x, studyArea, res = 5,
                                dist = 20,
-                               elev = "elev",
+                               elev = NULL,
                                DTM = NULL,
                                elev_threshold = 250,
                                projectLog = parent.frame()$projectLog,
@@ -106,9 +106,10 @@ capacity_pollination <- function(x, studyArea, res = 5,
 
    dtm <- dtm[sapply(dtm, function(x) rgeos::gIntersects(as(raster::extent(x), "SpatialPolygons"), ex))]
 
-   if (length(dtm) == 0) stop("DTM doesn't intersect your study area.")
-
-   if (length(dtm) > 1){
+   if (length(dtm) == 0) {stop("DTM doesn't intersect your study area.")} else
+      if (length(dtm) == 1){
+         dtm <- dtm[[1]]  # extract raster from list
+      } else {
 
       # If tiles, they will be merged (takes a while) and merged output saved for future use.
       message("Merging DTM tiles. This may take a while.")

@@ -101,9 +101,10 @@ capacity_water_purif <- function(x, studyArea, DTM = NULL, spr = NULL,
 
    dtm <- dtm[sapply(dtm, function(x) rgeos::gIntersects(as(raster::extent(x), "SpatialPolygons"), ex))]
 
-   if (length(dtm) == 0) stop("DTM doesn't intersect your study area.")
-
-   if (length(dtm) > 1){
+   if (length(dtm) == 0) {stop("DTM doesn't intersect your study area.")} else
+      if(length(dtm) == 1){
+         dtm <- dtm[[1]] # extract from list
+      } else {
 
    # If tiles, they will be merged (takes a while) and merged output saved for future use.
       message("Merging DTM tiles. This may take a while.")
@@ -279,7 +280,7 @@ capacity_water_purif <- function(x, studyArea, DTM = NULL, spr = NULL,
 
    ### Also create a standardised version
 
-   maxval <- max(values(final), na.rm = TRUE)
+   maxval <- max(raster::values(final), na.rm = TRUE)
 
    final_scaled <- raster::writeRaster(
       final/maxval*100,  # rescale from 0-100
