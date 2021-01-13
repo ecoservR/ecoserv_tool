@@ -68,7 +68,7 @@ prepTiles <- function(mm, vect, studyArea = studyAreaBuffer, value){
 
       vect <- split(vect, vect$OStile)
 
-
+   if (length(vect) == 0) {return(NULL)}
 
 
    ## If a tile is empty, remove it

@@ -79,6 +79,10 @@ crome$lucode <- dplyr::recode(crome$lucode, !!!crome_lookup, .default = as.facto
       crome_v <- prepTiles(mm, crome, studyArea = studyAreaBuffer, value = "lucode")
       rm(crome)
 
+      if(is.null(crome_v)){
+         return(message("WARNING: CROME data not added: No data coverage for your study area."))
+      }
+
       crome_r <- makeTiles(crome_v, value = "lucode", name = "crome")
       rm(crome_v)
 

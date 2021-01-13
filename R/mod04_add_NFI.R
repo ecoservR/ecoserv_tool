@@ -73,6 +73,11 @@ nfi <- nfi %>%
 nfi_v <- prepTiles(mm, nfi, studyArea = studyAreaBuffer, value = "woodtype")
 rm(nfi)
 
+if(is.null(nfi_v)){
+   return(message("WARNING: National Forest Inventory data not added: No data coverage for your study area."))
+}
+
+
 nfi_r <- makeTiles(nfi_v, value = "woodtype", name = "NFI")
 rm(nfi_v)
 

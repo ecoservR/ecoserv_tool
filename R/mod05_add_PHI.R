@@ -76,6 +76,10 @@ add_PHI <- function(mm = parent.frame()$mm,
       phi_v <- prepTiles(mm, phi, studyArea = studyAreaBuffer, value = "bapHab")
       rm(phi)
 
+      if(is.null(phi_v)){
+         return(message("WARNING: Priority Habitat Inventory data not added: No data coverage for your study area."))
+      }
+
       phi_r <- makeTiles(phi_v, value = "bapHab", name = "PHI")
       rm(phi_v)
 

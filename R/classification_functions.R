@@ -1,0 +1,503 @@
+#######################################
+### Classification functions        ###
+### for EcoservR                    ###
+### Sandra Angers-Blondin           ###
+### 11-01-2021                      ###
+#######################################
+
+
+#' Permute Terms
+#'
+#' This function returns all possible permutations of given terms.
+
+#' @param ... Terms to shuffle, in quotation marks
+#' @param sep The separator that will appear between elements in the resulting string (default is comma without spaces for OS MasterMap terms)
+#' @return A vector containing all possible permutations of the terms, each permutation as a character string.
+#' @export
+
+permute <- function(..., sep = ","){
+   x <- c(...)
+   n <- length(x)
+   r <- length(x)
+   combin <- gtools::permutations(n, r, v = x)  # create all possible combinations of the elements
+
+   apply(combin, 1, paste, collapse=sep) # string the combinations
+}
+
+
+
+# ROUND 1 Classification from Mastermap -----------------------------------
+
+#' Classify Habitats Using OS MasterMap Terms
+#'
+#' Assigns the most likely habitat type based on information contained by OS MasterMap (using Descriptive Group and Descriptive Term).
+
+#' @param x A basemap sf object, which must contain the attributes Group (Descriptive Group from OS MasterMap), Term (Descriptive Term from OS MasterMap) and Make (from OS MasterMap).
+#' @return The basemap sf object with a new attribute HabCode_B
+#' @export
+
+
+classif_mastermap <- function(x){
+
+   x <- x %>% dplyr::mutate(
+
+      ### first round of classif from MasterMap only ----
+
+      HabCode_B = dplyr::case_when(
+
+         # active mines should be classified as such - we do it first so they don't get swept under the rug by another regular expression
+         grepl("Spoil Heap", Term) ~ "I22",  # should we classify if vegetated?
+         grepl("Mineral Workings", Term) & !grepl("Inactive", Term) ~ "I2u",
+
+         # inactive mines get classified as the vegetation that colonised them
+         grepl("Mineral Workings", Term) &
+            grepl("Coniferous Trees", Term) &
+            grepl("Nonconiferous Trees", Term) ~ "A13",
+
+         grepl("Mineral Workings", Term) &
+            grepl("Coniferous Trees", Term) ~ "A12",
+
+         grepl("Mineral Workings", Term) &
+            grepl("Nonconiferous Trees", Term) ~ "A11",
+
+         grepl("Mineral Workings", Term) &
+            grepl("Heath", Term) ~ "D/I1",
+
+         grepl("Mineral Workings", Term) &
+            grepl("Rough Grassland", Term) ~ "Bu1",
+
+
+         Term == "Landfill" ~ "I24",
+
+
+         # classifying roads, roadsides, and surfaces -----
+         grepl("Road Or Track", Group) & Make == "Natural" ~ "J512",  # unsurfaced road
+         grepl("Road Or Track", Group) & Make == "Manmade" ~ "J511",  # surfaced road
+         grepl("General Surface", Group) & Make %in% c("Manmade", "Unknown") ~ "J37",  # sealed surface
+         grepl("Roadside", Group) & Make == "Natural" ~ "J12v",  # improve
+         grepl("Roadside", Group) & Make %in% c("Manmade", "Unknown") ~ "J52",  # pavement
+         grepl("Rail", Group) & Make != "Natural" ~ "J53",      # railway
+         grepl("Rail", Group) & Make == "Natural" ~ "Buu/C31",  # improve; rail verges
+         grepl("Path", Group) & Make == "Manmade" ~ "J54",      # sealed path
+
+
+
+         # classify gardens -----
+         grepl("General Surface", Group) & Make == "Multiple" &
+            shp_area > gardensize & shp_index > gardenshape & GI != "Private Garden" ~ "J55",
+
+         grepl("General Surface", Group) & Make == "Multiple" & shp_area <= gardensize ~ "J56",   # catch-all rule if GI not available
+
+         grepl("General Surface", Group) & Make == "Multiple" & shp_index <= gardenshape ~ "J56",
+
+
+         # Buildings and manmade structures -----
+         # takes precedence over some previous classification
+         # anything with Structure in the DescGroup gets converted to Structure code -----
+
+         grepl("Building", Group) & shp_area > housemax ~ "J361",  # bigger than house is a business
+         grepl("Building", Group) & shp_area < housemin ~ "J362",  # smaller than house is a shed
+         grepl("Building", Group) & between(shp_area, housemin, housemax) ~ "J360",  # domestic
+         ## I did not include the proximity to a garden - not all houses have gardens?!
+
+         Group == "Glasshouse" ~ "J364",
+
+         grepl("Structure", Group) & Make == "Manmade" ~ "J363",  # more general; whatever not caught above might be assigned as a structure with this
+
+
+         grepl("Building", Group) ~ "J36u",  # improve
+         # most general
+
+
+         # Woodlands and trees -----
+         # order shouldn't matter here as they are all equivalent (no overlap of multiple conditions)
+
+         grepl("Hedgerow", Term, ignore.case = TRUE) ~ "J21",  # for hedges from mod08
+
+         Term == "Orchard" ~ "A112o",
+
+
+         ## Broadleaved forests
+         Term == "Nonconiferous Trees" ~ "A11",
+
+         Term %in% c(
+            permute("Nonconiferous Trees", "Boulders (Scattered)"),
+            permute("Nonconiferous Trees", "Rock (Scattered)"),
+            permute("Nonconiferous Trees", "Boulders (Scattered)", "Rock (Scattered)")) ~ "A11",  # forest with boulders
+
+
+         Term %in% c(
+            permute("Nonconiferous Trees", "Scrub"),
+            permute("Coppice Or Osiers", "Nonconiferous Trees"),
+            permute("Boulders (Scattered)","Nonconiferous Trees","Scrub"),
+            permute("Rock (Scattered)","Nonconiferous Trees","Scrub"),
+            permute("Boulders (Scattered)","Rock (Scattered)", "Nonconiferous Trees","Scrub")) ~ "A11/A2", # forest with scrub
+
+
+         ## Coniferous forests
+
+         Term == "Coniferous Trees" ~ "A12",
+
+         Term %in% c(
+            permute("Coniferous Trees", "Boulders (Scattered)"),
+            permute("Coniferous Trees", "Shingle"),
+            permute("Coniferous Trees", "Boulders (Scattered)", "Rock (Scattered)"),
+            permute("Coniferous Trees", "Rock (Scattered)")) ~ "A12", # forest with boulders
+
+
+         Term %in% permute("Coniferous Trees", "Scrub") ~ "A12/A2",  # forest with scrub
+
+
+         ## Mixed forests
+
+         Term %in% permute("Coniferous Trees", "Nonconiferous Trees") ~ "A13",
+
+         Term %in% c(
+            permute("Coniferous Trees", "Nonconiferous Trees", "Shingle"),
+            permute("Coniferous Trees", "Nonconiferous Trees", "Boulders (Scattered)"),
+            permute("Coniferous Trees", "Nonconiferous Trees", "Rock (Scattered)")) ~ "A13",  # forest with boulders
+
+
+         Term %in% c(
+            permute("Coniferous Trees", "Nonconiferous Trees", "Coppice Or Osiers"),
+            permute("Scrub", "Nonconiferous Trees", "Coniferous Trees")) ~ "A13/A2",  # forest with scrub
+
+         ## Scrub
+         Term == "Scrub" ~ "A2",
+
+         Term %in% c(
+            permute("Scrub", "Coppice Or Osiers"),
+            permute("Scrub", "Boulders (Scattered)"),
+            permute("Scrub", "Rock (Scattered)")) ~ "A2",
+
+
+         ## Scattered trees
+         Term == "Nonconiferous Trees (Scattered)" ~ "A31",
+         Term %in% c(
+            permute("Nonconiferous Trees (Scattered)","Boulders (Scattered)"),
+            permute("Nonconiferous Trees (Scattered)","Rock (Scattered)")) ~ "A31",
+         Term %in% permute("Scrub", "Nonconiferous Trees (Scattered)") ~ "A31/A2",
+
+
+         Term == "Coniferous Trees (Scattered)" ~ "A32",
+         Term %in% c(
+            permute("Coniferous Trees (Scattered)","Boulders (Scattered)"),
+            permute("Coniferous Trees (Scattered)","Rock (Scattered)")) ~ "A32",
+         Term %in% permute("Scrub", "Coniferous Trees (Scattered)") ~ "A32/A2",
+
+
+         Term %in% permute("Coniferous Trees (Scattered)", "Nonconiferous Trees (Scattered)") ~ "A33",
+         Term %in% c(
+            permute("Nonconiferous Trees (Scattered)","Coniferous Trees (Scattered)", "Boulders (Scattered)"),
+            permute("Nonconiferous Trees (Scattered)","Coniferous Trees (Scattered)", "Boulders (Scattered)")) ~ "A33",
+         Term %in% permute("Coniferous Trees (Scattered)", "Nonconiferous Trees (Scattered)", "Scrub") ~ "A33/A2",
+
+
+
+         ## Grasslands -----
+
+         # Unknown, probable semi-improved
+         Term == "Rough Grassland" ~ "Bu",
+
+         # Rough grassland with rocky stuff must be unimproved
+         # **perhaps not quite right
+         Term %in% c(
+            permute("Rough Grassland","Boulders"),
+            permute("Rough Grassland","Boulders (Scattered)"),
+            permute("Rough Grassland","Rock"),
+            permute("Rough Grassland","Rock (Scattered)"),
+            permute("Rough Grassland","Boulders","Rock"),
+            permute("Rough Grassland","Rock","Boulders (Scattered)"),
+            permute("Rough Grassland","Rock (Scattered)","Boulders"),
+            permute("Rough Grassland","Rock (Scattered)","Boulders (Scattered)")) ~ "Bu1",
+
+         # Grassland with scattered trees or scrub
+         Term %in% c(
+            permute("Rough Grassland","Scrub"),
+            permute("Rough Grassland","Scrub","Nonconiferous Trees (Scattered)"),
+            permute("Rough Grassland","Nonconiferous Trees (Scattered)")) ~ "Bu_A2/A31",
+
+
+         # Grassland with more trees
+         Term %in% c(
+            permute("Rough Grassland","Nonconiferous Trees"),
+            permute("Rough Grassland","Scrub","Nonconiferous Trees"),
+            permute("Rough Grassland","Nonconiferous Trees (Scattered)")) ~ "Bu_A11",
+
+         Term %in% permute("Rough Grassland","Coniferous Trees") ~ "Bu_A12",
+
+
+         ## Rocky stuff -----
+         ## RO DO check Lucy's script for this section
+
+         Term == "Scree" ~ "I12",
+
+         Term %in% c(
+            "Boulders",
+            permute("Boulders","Rock"),
+            "Boulders (Scattered)")  ~ "I14b",
+
+         Term %in% c("Rock",
+                                "Rock (Scattered)") ~ "I1",
+
+         Term == "Cliff" ~ "I11/H8",    # can't know if it's maritime or inland without other data
+
+         Term %in% c("Shingle") ~ "H3",
+
+         # Classifying coastal
+         Group == "Tidal Water" & Term != "Foreshore" ~ "G26",  # revise when testing coastal
+
+         Term %in% c("Foreshore,Mud",
+                                "Foreshore,Sand",
+                                "Mud") ~ "H11",
+
+         Term %in% c("Foreshore,Shingle",
+                                "Foreshore,Sand,Shingle",
+                                "Foreshore,Shingle,Sand",
+                                "Sand") ~ "H12",
+
+
+         Term %in% c("Foreshore,Rock",
+                                "Rock,Foreshore",
+                                "Boulders,Foreshore",
+                                "Foreshore,Boulders") ~ "H13",
+
+         grepl("Saltmarsh", Term) ~ "H2u",
+
+         grepl("Foreshore", Term) & Make != "Manmade" ~ "H1u",
+
+
+
+         ## Marsh habitats -----
+
+         Term %in% c("Marsh") ~ "B5/E3/F/H2",  # replaced Marsh Reeds or Saltmarsh by Marsh
+
+         Term %in% c(
+            permute("Marsh","Nonconiferous Trees","Scrub"),
+            permute("Marsh","Coniferous Trees","Scrub"),
+            permute("Marsh","Nonconiferous Trees (Scattered)","Scrub"),
+            permute("Marsh","Coniferous Trees (Scattered)","Scrub"),
+            permute("Marsh","Nonconiferous Trees (Scattered)"),
+            permute("Marsh","Coniferous Trees (Scattered)"),
+            permute("Marsh","Nonconiferous Trees"),
+            permute("Marsh","Coniferous Trees"),
+            permute("Marsh","Scrub"),
+            permute("Marsh","Nonconiferous Trees","Coniferous Trees"),
+            permute("Marsh","Nonconiferous Trees","Coniferous Trees", "Scrub")) ~ "B5_Au",
+
+
+         Term %in% permute("Marsh","Rough Grassland") ~ "B5",
+
+         ## Heathlands ----
+
+         # Heath with rocks
+         Term %in% c(
+            permute("Heath","Boulders (Scattered)"),
+            permute("Heath","Rock (Scattered)"),
+            permute("Heath","Boulders", "Rock"),
+            permute("Heath","Boulders (Scattered)", "Rock"),
+            permute("Heath","Boulders", "Rock (Scattered)"),
+            permute("Heath","Boulders (Scattered)", "Rock (Scattered)")) ~ "D/I1",
+
+         # Marshy heath
+         Term %in% permute("Heath","Marsh","Rough Grassland") ~ "D5/D6",
+
+         Term %in% c(
+            "Heath",
+            permute("Heath","Marsh")) ~ "D_B5/E3/F/H2",   # improve
+
+
+         Term %in% permute("Marsh","Rough Grassland") ~ "B5/E3/F/H2",   # improve
+
+         Term %in% c(
+            permute("Heath","Rough Grassland","Boulders (Scattered)","Rock (Scattered)"),
+            permute("Heath","Rough Grassland","Boulders (Scattered)"),
+            permute("Heath","Rough Grassland","Rock (Scattered)"),
+            permute("Heath","Rough Grassland","Rock","Boulders"),
+            permute("Heath","Rough Grassland","Rock"),
+            permute("Heath","Rough Grassland","Boulders"),
+            permute("Heath","Rough Grassland","Boulders", "Rock (Scattered)"),
+            permute("Heath","Rough Grassland","Boulders (Scattered)", "Rock"),
+            permute("Heath","Rough Grassland")) ~ "D5",
+
+
+         Term %in% c("Reeds",
+                                permute("Reeds","Static Water")) ~ "F1",    # should it be swamp or something else?
+
+         ## After all possible grasslands classified with other rules; uncertain agricultural land
+         grepl("General Surface", Group) & Make == "Natural" ~ "B4/J11",
+
+
+         ## Water habitats -----
+         Group == "Sea" ~ "G3",
+
+         grepl("Static Water", Term) | grepl("Reservoir", Term)  ~ "G1u",  # standing water
+
+         grepl("Watercourse", Term) | grepl("Waterfall", Term) |
+            grepl("Canal", Term)  ~ "G2u",  # running water
+
+         grepl("Drain", Term) ~ "G",
+
+         Group == "Inland Water" & Make == "Natural" ~ "G",
+         Group == "Inland Water" & Make != "Natural" ~ "J363"   #structure: probably lock
+
+      )
+
+   ) %>%  # end of mutate for mastermap classification
+
+      ## add a filler condition for whatever has not been updated (unknown trees etc):
+
+      dplyr::mutate(HabCode_B = ifelse(
+         is.na(HabCode_B), # if there is no classification, add some fillers for habitats with trees and general grass
+         dplyr::case_when(
+            grepl("Heath", Term) &
+               (grepl("Trees", Term) | grepl("Scrub", Term)) ~ "D5/Au",
+
+            grepl("Rough Grassland", Term) &
+               (grepl("Trees", Term) | grepl("Scrub", Term)) ~ "Bu_Au",
+
+            grepl("Heath", Term) &
+               grepl("Rough Grassland", Term) &
+               (grepl("Trees", Term) | grepl("Scrub", Term)) ~ "D5/Bu/Au"
+         ),
+         HabCode_B
+      )
+      )
+}  # end of MasterMap classification function
+
+
+
+
+
+# Classification with PHI -----------------------------------------
+
+#' Classify Habitats Using OS Priority Habitats Inventory
+#'
+#' Assigns the most likely habitat type based on information contained in priority habitat inventory and first classification step by OS data. Not meant to be called directly; rather is used conditionally in classify_habitats().
+
+#' @param x A basemap sf object, which must contain the attributes HabCode_B and phi
+#' @return The basemap sf object with updated attribute HabCode_B
+#' @export
+
+
+
+classif_phi <- function(x){
+
+   ## Do we need to add a OR is.na(HabCode_B) to each statement? Test on subset
+
+   x <- x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
+
+      # from MOST SPECIFIC to most general
+
+      ## Orchards
+
+      phi == "Traditional orchard" & grepl("A", HabCode_B) ~ "A112o_T",  # traditional orchard
+      phi != "Traditional orchard" & HabCode_B == "A112o" ~ "A112o",     # commercial orchard
+
+
+      ## Semi-natural broadleaved
+      phi == "Deciduous woodland" & (grepl("A", HabCode_B)|is.na(HabCode_B)) &
+         HabCode_B != "B5_Au" & !grepl("I2", HabCode_B) ~ "A111", # all things with trees except boggy or quarry types
+
+
+      ## Montane habitats
+      phi == "Mountain heaths and willow scrub" &
+         (grepl("A", HabCode_B) | grepl("B4/J11", HabCode_B) | grepl("D", HabCode_B)) ~ "A2m",
+
+
+      ## Moorland (no trees)
+      phi == "Grass moorland" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B11m",
+      phi == "Grass moorland" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B11m",
+
+      ## Acid grassland
+      phi == "Lowland dry acid grassland" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B11",
+      phi == "Lowland dry acid grassland" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B11",
+
+      phi == "Lowland meadows" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B21",
+
+      grepl("Calcareous grassland", phi, ignore.case = TRUE) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B31",
+      grepl("Calcareous grassland", phi, ignore.case = TRUE) & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B31",
+
+      ## Floodplain or grazing marsh
+      grepl("Floodplain", phi, ignore.case = TRUE) & HabCode_B == "B4/J11" ~ "B4f",
+      grepl("Floodplain", phi, ignore.case = TRUE) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B4f",
+
+      phi == "Purple moor grass and rush pastures"  & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B5",
+      phi == "Purple moor grass and rush pastures"  & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B5",
+
+      # all heathlands excluding montane scrub
+      grepl("heath", phi) & !grepl("Mountain heaths", phi) & HabCode_B == "A2b" ~ "D/I1",
+
+      grepl("heath", phi) & !grepl("Mountain heaths", phi) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "Du",  # not sure if should include fragmented heath
+      grepl("heath", phi) & !grepl("Mountain heaths", phi) & HabCode_B %in% c("D/E", "D_B5/E3/F/H2") ~ "Du",
+
+      phi == "No main habitat but additional habitats present" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "D5/D6",
+      phi == "No main habitat but additional habitats present" & HabCode_B %in% c("D/E", "D_B5/E3/F/H2") ~ "D5/D6",
+
+      phi == "Upland flushes, fens and swamps" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "E2/E3/F1",
+      phi == "Upland flushes, fens and swamps" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "E2/E3/F1",
+
+      phi == "Lowland fens" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "E3/F1",
+      phi == "Lowland fens" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "E3/F1",
+
+      phi == "Blanket bog" & HabCode_B %in% c("Bu", "Bu1/Bu2", "B4/J11", "B5", "B5/E3/F/H3", "B5/E3/F/H3_Bu1/Bu2") ~ "E161",
+      phi == "Blanket bog" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "E161",  # these should be E161?
+
+      grepl("aised bog", phi) & grepl("B", HabCode_B) ~ "E162",
+      grepl("aised bog", phi) & grepl("D", HabCode_B) ~ "E162",
+
+      phi == "Reedbeds" & grepl("B", HabCode_B) ~ "F1",
+      phi == "Reedbeds" & grepl("D", HabCode_B) ~ "F1",
+
+      phi == "Saline lagoons" & grepl("G", HabCode_B) ~ "G16",
+
+      phi == "Coastal sand dunes" & HabCode_B == "H1u" ~ "H6u",
+      phi == "Coastal sand dunes" & grepl("B", HabCode_B) ~ "H6u",
+      phi == "Coastal sand dunes" & grepl("D", HabCode_B) ~ "H6u",
+
+      phi == "Coastal vegetated shingle" & grepl("H", HabCode_B) ~ "H3/H5",
+      phi == "Coastal vegetated shingle" & grepl("B", HabCode_B) ~ "H3/H5",
+      phi == "Coastal vegetated shingle" & grepl("D", HabCode_B) ~ "H3/H5",
+
+      phi == "Mudflats" & grepl("B", HabCode_B) ~ "H11",
+      phi == "Mudflats" & grepl("H", HabCode_B) ~ "H11",
+
+      phi == "Coastal saltmarsh" & HabCode_B == "H1u" ~ "H2u",
+      phi == "Coastal saltmarsh" & grepl("B", HabCode_B) ~ "H2u",
+      phi == "Coastal saltmarsh" & grepl("D", HabCode_B) ~ "H2u",
+
+      phi == "Maritime cliff and slope" & HabCode_B %in% c("H1u", "I11/H8") ~ "H8",
+      phi == "Maritime cliff and slope" & grepl("B", HabCode_B) ~ "H8",
+      phi == "Maritime cliff and slope" & grepl("D", HabCode_B) ~ "H8",
+
+      phi == "Limestone pavement" & grepl("I", HabCode_B) ~ "I13",
+      phi == "Limestone pavement" & grepl("B", HabCode_B) ~ "I13",
+      phi == "Limestone pavement" & grepl("D", HabCode_B) ~ "I13",
+
+
+      ## Calaminarian grassland is grassland community on heavy metal soils
+      phi == "Calaminarian grassland" & grepl("B", habCode) ~ "Ic",
+      phi == "Calaminarian grassland" & grepl("I", habCode) ~ "Ic",
+
+      # more general codes (unknown habitat types after rest has been classified)
+
+      phi == "Good quality semi-improved grassland"  & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "Bu2",
+      phi == "Good quality semi-improved grassland"  & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "Bu1",
+
+      # any grassland that comes after the GQ semi improved is natural (unimproved)
+      grepl("grassland", phi, ignore.case = TRUE) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "Bu1",
+      grepl("grassland", phi, ignore.case = TRUE) & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "Bu1",
+
+      TRUE ~ HabCode_B  # a catch-all statement so that non updated values remain (and don't become NA)
+
+      # These may no longer have equivalent
+      # phi == BROWN IN TABLE...WHAT BAP HABITAT? & grepl("B", habCode) ~ "J13",
+      # phi == BROWN IN TABLE...WHAT BAP HABITAT?& grepl("D", habCode) ~ "J13",
+   )
+   )
+}
+
+
+## after this, uncertain agri is still B4/J11
+
+

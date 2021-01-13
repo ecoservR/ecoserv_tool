@@ -106,6 +106,12 @@ if (!is.na(corinepath) & !is.null(corinepath)){
       corine_v <- prepTiles(mm, corine, studyArea = studyAreaBuffer, value = "code")
       rm(corine)
 
+      if(is.null(corine_v)){
+         return(message("WARNING: CORINE not added: No data coverage for your study area."))
+      }
+
+
+
       corine_r <- makeTiles(corine_v, value = "code", name = "corine")
       rm(corine_v)
 

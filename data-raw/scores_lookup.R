@@ -5,10 +5,10 @@
 ###########################################################################
 
 ## This needs to be run frequently on the latest version of the lookup table.
-## (Still to do:
+## Still to do:
 ##### revise possible HabCodes
 ##### tidy up information
-##### revise carbon scores
+##### revise carbon scores (estuarine codes revised by Lucy Dowdall December 2020)
 ##### add carbon sequestration scores
 
 
@@ -21,4 +21,4 @@ hab_lookup <- read.csv("C://ecoservR_package_support/ecoserv_hab_lookup.csv", se
 
 
 
-usethis::use_data(hab_lookup)
+usethis::use_data(hab_lookup, overwrite = TRUE)

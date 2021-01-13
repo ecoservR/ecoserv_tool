@@ -193,12 +193,18 @@ if (exists("green")){
 
 opengreen <- prepTiles(mm, opengreen, studyArea = studyAreaBuffer, value = "op_function")
 
+## Rasterize and extract into basemap, unless there is no coverage at all in study area (in which case we exit the function early with a message)
+
+      if(is.null(opengreen)){
+        return(message("WARNING: OS Open Greenspace not added: No data coverage for your study area."))
+      }
+
 
 # We then feed this list object of vector tiles into the makeTiles function (another custom function).
 # This will rasterize the vector data into a list of tiles stored temporarily on disk: this prevents running into memory issues for large datasets.
 
 opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
-                     scratch = scratch_path, # this path was defined in basemapper script
+                     scratch = scratch_path,
                      name = "opgreen")  # ref name for the temp files
 
       # Create a key from the rasters' levels to add the descriptions back into the mastermap after extraction
