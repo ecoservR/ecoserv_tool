@@ -339,7 +339,10 @@ classif_mastermap <- function(x){
          grepl("Drain", Term) ~ "G",
 
          Group == "Inland Water" & Make == "Natural" ~ "G",
-         Group == "Inland Water" & Make != "Natural" ~ "J363"   #structure: probably lock
+         Group == "Inland Water" & Make != "Natural" ~ "J363",   #structure: probably lock
+
+         # unclassified things the size of a house and roughly square must be buildings
+         Group == "Unclassified" & Make != "Natural" & shp_area < housemax & between(shp_index, 1, 2) ~ "J363"
 
       )
 
@@ -476,8 +479,8 @@ classif_phi <- function(x){
 
 
       ## Calaminarian grassland is grassland community on heavy metal soils
-      phi == "Calaminarian grassland" & grepl("B", habCode) ~ "Ic",
-      phi == "Calaminarian grassland" & grepl("I", habCode) ~ "Ic",
+      phi == "Calaminarian grassland" & grepl("B", HabCode_B) ~ "Ic",
+      phi == "Calaminarian grassland" & grepl("I", HabCode_B) ~ "Ic",
 
       # more general codes (unknown habitat types after rest has been classified)
 
@@ -499,5 +502,158 @@ classif_phi <- function(x){
 
 
 ## after this, uncertain agri is still B4/J11
+
+# Classification with greenspace ------------------------------------------
+
+#' Classify Habitats Using OS Greenspace / Open Greenspace
+#'
+#' Revises habitat classification by considering green infrastructure information. Not meant to be called directly; rather is used conditionally in classify_habitats().
+
+#' @param x A basemap sf object, which must contain the attributes HabCode_B and GI
+#' @return The basemap sf object with updated attribute HabCode_B
+#' @export
+
+classif_green <- function(x){
+
+   ## If there is no GI attribute (e.g. there was no OS coverage for the study area), we assign simple GI categories based on MasterMap before classifying. Not very useful for the classification but necessary for access rules.
+
+   if (!"GI" %in% names(x)){
+
+      x <- x %>% dplyr::mutate(GI = dplyr::case_when(
+
+         Make == "Manmade" ~ "Not Greenspace",
+
+         grepl("Foreshore", Term) ~ "Beach Or Foreshore",
+         grepl("Agricultural Land", Term) ~ "Undertermined Greenspace",
+
+         Group == "Natural Environment" ~ "Natural",
+
+         Make == "Multiple" & Term == "Multi Surface" & Group == "General Surface" &
+            shp_area < gardensize & shp_index < gardenshape ~ "Private Garden", # most frequent combination for Private Garden
+
+         Group == "General Surface" & Make == "Natural" ~ "Undertermined Greenspace"
+
+      ))
+
+   }
+
+
+   x <- x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
+
+      GI == "Allotments Or Community Growing Spaces" & HabCode_B == "B4/J11" ~ "J11t",
+
+      # TO DO: Coastal does not seem to exist in MM Greenspace, so look for amenity with MM group foreshore?
+
+      GI == "Coastal" & HabCode_B == "B4/J11" ~ "H1u",  # check factor name on full dataset
+      GI == "Beach Or Foreshore" & (HabCode_B == "B4/J11" | !grepl("H", HabCode_B)) ~ "H1u",
+
+
+      GI == "Camping Or Caravan Park" & HabCode_B == "B4/J11" ~ "J34",
+
+      # all amenity fields
+      GI %in% c("Amenity",
+                "Religious Grounds", "Cemetery",
+                "Public Park Or Garden",
+                "Play Space",
+                "Bowling Green",
+                "Golf Course",
+                "Tennis Court",
+                "Playing Field",
+                "Other Sports Facility",
+                "Institutional Grounds",
+                "School Grounds") & (grepl("B4/J11", HabCode_B)|is.na(HabCode_B))~ "J12",
+      # relaxed need of HabCode_B (was B4/J11)
+      # new edit; removed the is.na(phi) condition so reintroduced the B4J11
+
+      grepl("General Surface", Group) & GI == "Private Garden" ~ "J56",
+
+      # natural or semi natural not needed because better informed by other datasets
+
+      Group == "Unclassified" & GI == "Not Greenspace" ~ "Unclassified, not greenspace",
+
+      Group == "Unclassified" & GI == "Land Use Changing" ~ "Unclassified, area in development",
+
+      TRUE ~ HabCode_B  # a catch-all statement so that non updated values remain
+
+   )
+   )
+
+}
+
+
+# Classification with Corine and Crome ------------------------------------
+
+#' Classify Habitats Using CORINE and/or CROME
+#'
+#' Revises habitat classification of agricultural land to differentiate pastures from arable land. Uses either CORINE Land Cover, Crop Map of England, or (ideally) both. Not meant to be called directly; rather is used conditionally in classify_habitats().
+
+#' @param x A basemap sf object, which must contain the attributes HabCode_B and corine or crome.
+#' @return The basemap sf object with updated attribute HabCode_B
+#' @export
+
+
+classif_agri <- function(x){
+
+   # We first try to classify based on both corine and crome if present
+
+   if (!is.null(x$corine) & !is.null(x$crome)){
+
+      x <- dplyr::mutate(x,
+                         HabCode_B = dplyr::case_when(
+
+                            # pastures
+                            HabCode_B == "B4/J11" &
+                               corine == "Pastures" &
+                               crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "B4/Bu",
+
+                            # crops
+                            HabCode_B == "B4/J11" & grepl("arable_land", corine) &
+                               !(crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land"))  ~ "J11",
+
+                            # if a polygon was unclassified and crome is vegetated
+                            Group == "Unclassified" & !crome %in% c("Non-vegetated or sparsely-vegetated Land") ~ "B4/J11",
+
+                            TRUE ~ HabCode_B
+                         ))
+   } else
+      if (!is.null(x$corine) & is.null(x$crome)){
+
+   # If only CORINE is used, we split between pastures and arable but not as accurate as corine & crome agreeing
+
+      x <- dplyr::mutate(x,
+                         HabCode_B = dplyr::case_when(
+
+                            # pastures
+                            HabCode_B == "B4/J11" & corine == "Pastures" ~ "B4/Bu",
+
+                            # crops
+                            HabCode_B == "B4/J11" & grepl("arable_land", corine) ~ "J11",
+
+                            # unclassified things
+                            Group == "Unclassified" & grepl("arable_land", corine)  ~ "J11",
+
+                            TRUE ~ HabCode_B
+                         ))
+   }
+
+
+   # Now if CROME is available we give it the last word in identifying pastures (regardless what CORINE says)
+
+   if (!is.null(x$crome)){
+      x <- dplyr::mutate(x,
+                         HabCode_B = dplyr::case_when(
+
+                            # pastures
+                            HabCode_B == "B4/J11" &
+                               crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "B4/Bu",
+
+                            # crops
+                            HabCode_B == "B4/J11" &
+                               !(crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land")) ~ "J11",
+
+                            TRUE ~ HabCode_B
+                         ))
+   }
+}
 
 

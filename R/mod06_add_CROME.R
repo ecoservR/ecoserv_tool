@@ -31,7 +31,7 @@ add_CROME <- function(mm = parent.frame()$mm,
 
    # Get path
    cromepath <- projectLog$df[projectLog$df$dataset == "crome", ][["path"]]  # path to corine data, if available
-
+   dsname <- projectLog$df[projectLog$df$dataset == "crome", ][["prettynames"]] # dataset name
 
    if (!is.na(cromepath) & !is.null(cromepath)){
       message("Preparing to update baseline with CROME data...")
@@ -80,6 +80,10 @@ crome$lucode <- dplyr::recode(crome$lucode, !!!crome_lookup, .default = as.facto
       rm(crome)
 
       if(is.null(crome_v)){
+
+         projectLog$ignored <- c(projectLog$ignored, dsname)
+         updateProjectLog(projectLog)
+
          return(message("WARNING: CROME data not added: No data coverage for your study area."))
       }
 

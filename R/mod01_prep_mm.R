@@ -34,6 +34,12 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    checkNames(mmpath, mmlayer, mm_cols) # will stop execution if col names specified by user don't match names in layer
 
 
+   ### Create output folder if doesn't exist
+   if (!dir.exists(output_temp)){
+      dir.create(output_temp)
+   }
+
+
    ### Import the study area outline (specifying OSGB as crs)
 
    studyArea <- try(loadSpatial(studypath,
@@ -111,9 +117,9 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                 function(x)
                    dplyr::filter(x,
                                  PhysicalLevel != "51",  # remove things above ground level
-                                 !grepl("Landform", x$DescriptiveGroup)  # remove any group with landform in description
+                                 !grepl("Landform", x$Group)  # remove any group with landform in description
                    ) %>%
-                   dplyr::select(TOID, Theme, DescriptiveGroup, DescriptiveTerm, Make)
+                   dplyr::select(-PhysicalLevel)
 
    )
 
@@ -317,7 +323,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                       slvr = (pi * ((peri / (2 * pi)) ^ 2)) / area   # from technical guide
                    ) %>%
                    # eliminate slivers
-                   dplyr::filter(!(area < 20 && slvr > 15 && DescriptiveGroup != "Path")  # remove narrow things that are not paths
+                   dplyr::filter(!(area < 20 && slvr > 15 && Group != "Path")  # remove narrow things that are not paths
                    )
 
    )

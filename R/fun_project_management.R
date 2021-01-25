@@ -131,13 +131,13 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 
        if (isFALSE(trustlog)){  # give priority to the latest file
 
-   warning(paste0("Last recorded MM object in project log is not the most recent file. Loading most recent file ", latest, " . To override this, specify trustlog = TRUE in function call."))
+   message(paste0("WARNING: Last recorded MM object in project log is not the most recent file. Loading most recent file ", latest, " . To override this, specify trustlog = TRUE in function call."))
 
       mm <- readRDS(latest)
 
        } else { # give priority to the log
 
-   warning(paste0("Last recorded MM object in project log is not the most recent file. Loading MM from ", success, " as indicated in project log. To override this, specify trustlog = FALSE in function call."))
+   message(paste0("WARNING: Last recorded MM object in project log is not the most recent file. Loading MM from ", success, " as indicated in project log. To override this, specify trustlog = FALSE in function call."))
 
       mm <- readRDS(success)
 
@@ -152,7 +152,19 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 
  ## Load the study buffer
 
-   studyAreaBuffer <- sf::st_read(projectLog$SAbuffer)
+   SA <- list.files(projectLog$output_temp, pattern = "studyAreaBuffer.RDS", full.names = TRUE, recursive = TRUE)
+   if(length(SA) > 1){
+    message(paste0("WARNING: More than 1 buffered study area found. Importing ",
+                   SA[[1]]))
+    studyAreaBuffer <- readRDS(SA[[1]])
+   } else if (length(SA) == 1){
+      studyAreaBuffer <- readRDS(SA[[1]])
+   } else {
+      stop(paste0("No buffered study area found in ",
+      file.path(wd, projectLog$output_temp),
+      " . Did you move or rename the file?"))
+   }
+
 
 
 ## Examine MM attributes and give a summary of what's done and not.
@@ -180,12 +192,24 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 
    toadd <- ds_names[!is.na(projectLog$df$path) & !ds_names %in% names(mmattr) & ds_names != "your study area"]
 
+   if (!is.null(projectLog$ignored)){
+      ## if some datasets did not cover the study area (module ran but no data added)
+
+   toadd <- setdiff(toadd, projectLog$ignored)  # exclude them from list of data to add
+   }
+
+   if (length(toadd) > 0){
    message(paste0("Your current basemap includes data from: \n",
                   paste0(included, collapse = " \n"),
                   ". \n\n Now you can add: \n",
                   paste0(toadd, collapse = "\n"),
                   "\n"))
-
+   } else {
+      message(paste0("Your current basemap includes data from: \n",
+                     paste0(included, collapse = " \n"),
+                     ". \n\n No more data to add.",
+                     "\n"))
+}
    return({
       ## returns the objects in the global environment
       invisible({

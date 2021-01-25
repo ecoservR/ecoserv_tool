@@ -30,6 +30,7 @@ add_PHI <- function(mm = parent.frame()$mm,
 
    # Get file path
    phipath <- projectLog$df[projectLog$df$dataset == "phi", ][["path"]]  # path to corine data, if available
+   dsname <- projectLog$df[projectLog$df$dataset == "phi", ][["prettynames"]] # dataset name
 
 
    if (!is.na(phipath) & !is.null(phipath)){
@@ -77,6 +78,10 @@ add_PHI <- function(mm = parent.frame()$mm,
       rm(phi)
 
       if(is.null(phi_v)){
+
+         projectLog$ignored <- c(projectLog$ignored, dsname)
+         updateProjectLog(projectLog)
+
          return(message("WARNING: Priority Habitat Inventory data not added: No data coverage for your study area."))
       }
 

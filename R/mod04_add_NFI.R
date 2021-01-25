@@ -31,6 +31,7 @@ add_NFI <- function(mm = parent.frame()$mm,
 
    # NFI info
    nfipath <- projectLog$df[projectLog$df$dataset == "nfi", ][["path"]]  # path to corine data, if available
+   dsname <- projectLog$df[projectLog$df$dataset == "nfi", ][["prettynames"]]
 
 
    if (!is.na(nfipath) & !is.null(nfipath)){
@@ -74,6 +75,10 @@ nfi_v <- prepTiles(mm, nfi, studyArea = studyAreaBuffer, value = "woodtype")
 rm(nfi)
 
 if(is.null(nfi_v)){
+
+   projectLog$ignored <- c(projectLog$ignored, dsname)
+   updateProjectLog(projectLog)
+
    return(message("WARNING: National Forest Inventory data not added: No data coverage for your study area."))
 }
 

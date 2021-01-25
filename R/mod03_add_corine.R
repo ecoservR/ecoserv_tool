@@ -31,7 +31,7 @@ add_corine <- function(mm = parent.frame()$mm,
 
    # Corine info
    corinepath <- projectLog$df[projectLog$df$dataset == "corine", ][["path"]]  # path to corine data, if available
-
+   dsname <- projectLog$df[projectLog$df$dataset == "corine", ][["prettynames"]]
 
 if (!is.na(corinepath) & !is.null(corinepath)){
 
@@ -107,6 +107,10 @@ if (!is.na(corinepath) & !is.null(corinepath)){
       rm(corine)
 
       if(is.null(corine_v)){
+
+         projectLog$ignored <- c(projectLog$ignored, dsname)
+         updateProjectLog(projectLog)
+
          return(message("WARNING: CORINE not added: No data coverage for your study area."))
       }
 

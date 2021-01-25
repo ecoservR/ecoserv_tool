@@ -1,3 +1,16 @@
+############################################################
+### Wizard app to select data sources                    ###
+### Saves a project log to the project folder            ###
+### Sandra Angers-Blondin                                ###
+### November 2020                                        ###
+############################################################
+
+## To do:
+
+## - create a selection menu for layers (like attributes) rather than having to type
+
+
+
 require(magrittr)
 
 source("funmod.R") # source functions and modules
@@ -283,8 +296,8 @@ observeEvent(input$checkdata, {
       cols = c(
          mm = list(c("TOID" = "TOID", # mmcols
                      "PhysicalLevel" = "PhysicalLevel",
-                     "DescriptiveGroup" = "DescriptiveGroup",
-                     "DescriptiveTerm" = "DescriptiveTerm",
+                     "Group" = "DescriptiveGroup",
+                     "Term" = "DescriptiveTerm",
                      "Theme" = "Theme",
                      "Make" = "Make")),
 

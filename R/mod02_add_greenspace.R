@@ -43,6 +43,8 @@ greenpath <- projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["path"]]
 # OS OPEN GREENSPACE
 opengreenpath <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["path"]]  # path to OS Open Greenspace (REQUIRED)
 
+dsname <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["prettynames"]]
+
 opengreenlayer <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["layer"]] # layer name
 opengreentype <- guessFiletype(opengreenpath) # data type, automatically determined
 
@@ -196,7 +198,12 @@ opengreen <- prepTiles(mm, opengreen, studyArea = studyAreaBuffer, value = "op_f
 ## Rasterize and extract into basemap, unless there is no coverage at all in study area (in which case we exit the function early with a message)
 
       if(is.null(opengreen)){
-        return(message("WARNING: OS Open Greenspace not added: No data coverage for your study area."))
+
+         projectLog$ignored <- c(projectLog$ignored, dsname)
+         updateProjectLog(projectLog)
+
+
+         return(message("WARNING: OS Open Greenspace not added: No data coverage for your study area."))
       }
 
 
