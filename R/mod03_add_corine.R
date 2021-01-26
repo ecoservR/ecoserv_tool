@@ -36,9 +36,11 @@ add_corine <- function(mm = parent.frame()$mm,
 if (!is.na(corinepath) & !is.null(corinepath)){
 
    # this will automatically determine the file extension of corine data (raster or vector)
-   corinetype <- if (any(grepl(".tif", list.files(corinepath)))){"tif"} else
-      if (any(grepl(".asc", list.files(corinepath)))){"asc"}
-   else {
+   corinetype <- if (any(grepl(".tif", list.files(corinepath)))){
+      "tif"
+      } else if (any(grepl(".asc", list.files(corinepath)))){
+         "asc"
+         } else {
       guessFiletype(corinepath)
    }
 
