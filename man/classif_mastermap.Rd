@@ -4,10 +4,12 @@
 \alias{classif_mastermap}
 \title{Classify Habitats Using OS MasterMap Terms}
 \usage{
-classif_mastermap(x)
+classif_mastermap(x, params)
 }
 \arguments{
 \item{x}{A basemap sf object, which must contain the attributes Group (Descriptive Group from OS MasterMap), Term (Descriptive Term from OS MasterMap) and Make (from OS MasterMap).}
+
+\item{params}{A list of parameters used as thresholds to classify certain habitats. See EcoservR documentation.}
 }
 \value{
 The basemap sf object with a new attribute HabCode_B

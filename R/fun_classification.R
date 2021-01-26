@@ -33,11 +33,12 @@ permute <- function(..., sep = ","){
 #' Assigns the most likely habitat type based on information contained by OS MasterMap (using Descriptive Group and Descriptive Term).
 
 #' @param x A basemap sf object, which must contain the attributes Group (Descriptive Group from OS MasterMap), Term (Descriptive Term from OS MasterMap) and Make (from OS MasterMap).
+#' @param params A list of parameters used as thresholds to classify certain habitats. See EcoservR documentation.
 #' @return The basemap sf object with a new attribute HabCode_B
 #' @export
 
 
-classif_mastermap <- function(x){
+classif_mastermap <- function(x, params){
 
    x <- x %>% dplyr::mutate(
 
@@ -84,20 +85,20 @@ classif_mastermap <- function(x){
 
          # classify gardens -----
          grepl("General Surface", Group) & Make == "Multiple" &
-            shp_area > gardensize & shp_index > gardenshape & GI != "Private Garden" ~ "J55",
+            shp_area > params$gardensize & shp_index > params$gardenshape & GI != "Private Garden" ~ "J55",
 
-         grepl("General Surface", Group) & Make == "Multiple" & shp_area <= gardensize ~ "J56",   # catch-all rule if GI not available
+         grepl("General Surface", Group) & Make == "Multiple" & shp_area <= params$gardensize ~ "J56",   # catch-all rule if GI not available
 
-         grepl("General Surface", Group) & Make == "Multiple" & shp_index <= gardenshape ~ "J56",
+         grepl("General Surface", Group) & Make == "Multiple" & shp_index <= params$gardenshape ~ "J56",
 
 
          # Buildings and manmade structures -----
          # takes precedence over some previous classification
          # anything with Structure in the DescGroup gets converted to Structure code -----
 
-         grepl("Building", Group) & shp_area > housemax ~ "J361",  # bigger than house is a business
-         grepl("Building", Group) & shp_area < housemin ~ "J362",  # smaller than house is a shed
-         grepl("Building", Group) & between(shp_area, housemin, housemax) ~ "J360",  # domestic
+         grepl("Building", Group) & shp_area > params$housemax ~ "J361",  # bigger than house is a business
+         grepl("Building", Group) & shp_area < params$housemin ~ "J362",  # smaller than house is a shed
+         grepl("Building", Group) & dplyr::between(shp_area, params$housemin, params$housemax) ~ "J360",  # domestic
          ## I did not include the proximity to a garden - not all houses have gardens?!
 
          Group == "Glasshouse" ~ "J364",
@@ -342,7 +343,7 @@ classif_mastermap <- function(x){
          Group == "Inland Water" & Make != "Natural" ~ "J363",   #structure: probably lock
 
          # unclassified things the size of a house and roughly square must be buildings
-         Group == "Unclassified" & Make != "Natural" & shp_area < housemax & between(shp_index, 1, 2) ~ "J363"
+         Group == "Unclassified" & Make != "Natural" & shp_area < params$housemax & dplyr::between(shp_index, 1, 2) ~ "J363"
 
       )
 
@@ -505,16 +506,16 @@ classif_phi <- function(x){
 
 # Classification with greenspace ------------------------------------------
 
-#' Classify Habitats Using OS Greenspace / Open Greenspace
+#' Create GI column from MasterMap
 #'
-#' Revises habitat classification by considering green infrastructure information. Not meant to be called directly; rather is used conditionally in classify_habitats().
+#' If the GI attribute is missing from basemap (e.g. because there was no OS Greenspace / Open Greenspace coverage for a site), this function creates the attribute based on information from OS Mastermap.
 
-#' @param x A basemap sf object, which must contain the attributes HabCode_B and GI
-#' @return The basemap sf object with updated attribute HabCode_B
+#' @param x A basemap sf object
+#' @param params A list of parameters used as thresholds to classify certain habitats. See EcoservR documentation.
+#' @return The basemap sf object with new attribute GI
 #' @export
 
-classif_green <- function(x){
-
+create_GI <- function(x, params){
    ## If there is no GI attribute (e.g. there was no OS coverage for the study area), we assign simple GI categories based on MasterMap before classifying. Not very useful for the classification but necessary for access rules.
 
    if (!"GI" %in% names(x)){
@@ -529,7 +530,7 @@ classif_green <- function(x){
          Group == "Natural Environment" ~ "Natural",
 
          Make == "Multiple" & Term == "Multi Surface" & Group == "General Surface" &
-            shp_area < gardensize & shp_index < gardenshape ~ "Private Garden", # most frequent combination for Private Garden
+            shp_area < params$gardensize & shp_index < params$gardenshape ~ "Private Garden", # most frequent combination for Private Garden
 
          Group == "General Surface" & Make == "Natural" ~ "Undertermined Greenspace"
 
@@ -537,8 +538,21 @@ classif_green <- function(x){
 
    }
 
+}
 
-   x <- x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
+
+
+#' Classify Habitats Using OS Greenspace / Open Greenspace
+#'
+#' Revises habitat classification by considering green infrastructure information. Not meant to be called directly; rather is used conditionally in classify_habitats().
+
+#' @param x A basemap sf object, which must contain the attributes HabCode_B and GI
+#' @return The basemap sf object with updated attribute HabCode_B
+#' @export
+
+classif_green <- function(x){
+
+  x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
 
       GI == "Allotments Or Community Growing Spaces" & HabCode_B == "B4/J11" ~ "J11t",
 

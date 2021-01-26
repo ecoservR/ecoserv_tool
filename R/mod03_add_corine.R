@@ -16,13 +16,13 @@
 #' @export
 
 add_corine <- function(mm = parent.frame()$mm,
-                      studyAreaBuffer = parent.frame()$studyAreaBuffer,
-                      projectLog = parent.frame()$projectLog){
+                       studyAreaBuffer = parent.frame()$studyAreaBuffer,
+                       projectLog = parent.frame()$projectLog){
 
    timeA <- Sys.time() # start time
 
 
-## Extract the file paths and other info from project log ----------------------
+   ## Extract the file paths and other info from project log ----------------------
 
    output_temp <- projectLog$output_temp
    title <- projectLog$title
@@ -33,240 +33,234 @@ add_corine <- function(mm = parent.frame()$mm,
    corinepath <- projectLog$df[projectLog$df$dataset == "corine", ][["path"]]  # path to corine data, if available
    dsname <- projectLog$df[projectLog$df$dataset == "corine", ][["prettynames"]]
 
-if (!is.na(corinepath) & !is.null(corinepath)){
+   if (!is.na(corinepath) & !is.null(corinepath)){
 
-   # this will automatically determine the file extension of corine data (raster or vector)
-   corinetype <- if (any(grepl(".tif", list.files(corinepath)))){
-      "tif"
-      } else if (any(grepl(".asc", list.files(corinepath)))){
-         "asc"
+      # this will automatically determine the file extension of corine data (raster or vector)
+      corinetype <- if (any(grepl(".tif", list.files(corinepath)))){"tif"} else if (any(grepl(".asc", list.files(corinepath)))){"asc"} else {guessFiletype(corinepath)}
+
+      message("Preparing to update baseline with Corine data")
+
+      if (!corinetype %in% c("asc", "tif")){ # begin workflow for vector version
+
+         # DATA IMPORT ---------------------------------------------------------------------------------
+
+         ## Import Corine data
+
+         corine <- loadSpatial(folder = corinepath, filetype = guessFiletype(corinepath))  # using the loading into list function in case there are many shp
+
+         corine <- do.call(rbind, corine) %>% sf::st_as_sf()  # putting back into one single sf object
+
+
+         corine_cols <- projectLog$df[projectLog$df$dataset == "corine", ][["cols"]][[1]]
+
+         # Rename columns if needed
+         corine <- dplyr::rename(corine, !!!corine_cols)
+
+
+         # Subset to only needed cols to lighten up the file
+         corine <- dplyr::select(corine, code)
+
+
+         ## No need to import lookup table: it is built into the package so should just be called
+
+
+         # DATA PREP -----------------------------------------------------------------------------------
+
+         message("Clipping Corine to study area...")
+
+         ## Corine is not in OSGB projection. We create a window slighly bigger than the study area in Corine's projection,
+         ## clip the data, and once we have our UK subset we can transform in OSGB.
+
+         # This extent is defined dynamically to be slightly bigger than the study area extent.
+         # Note: this code was in a nice log pipe, but breaks when used as a function...
+
+
+         cliplayer <- sf::st_as_sf(methods::as(1.2 * raster::extent(studyAreaBuffer),
+                                               "SpatialPolygons"))
+
+         cliplayer <- sf::st_set_crs(cliplayer,
+                                     sf::st_crs(studyAreaBuffer)) %>%  ## original crs gets lost
+            sf::st_transform(sf::st_crs(corine))
+
+
+         corine <- suppressWarnings({
+            sf::st_intersection(corine, sf::st_geometry(cliplayer)) %>%  # subset corine
+               sf::st_transform(sf::st_crs(studyAreaBuffer)) %>%   # reproject in OS grid reference
+               sf::st_intersection(studyAreaBuffer) %>%  # clip to study area
+               sf::st_make_valid() %>%                      # check and repair geometry
+               sf::st_cast(to = "MULTIPOLYGON") %>%         # multi to single part
+               sf::st_cast(to = "POLYGON")
+         })
+
+         rm(cliplayer)
+
+         message("Extracting Corine data...")
+
+
+         ## Rasterize data (will create tiles if needed)
+
+         corine_v <- prepTiles(mm, corine, studyArea = studyAreaBuffer, value = "code")
+         rm(corine)
+
+         if(is.null(corine_v)){
+
+            projectLog$ignored <- c(projectLog$ignored, dsname)
+            updateProjectLog(projectLog)
+
+            return(message("WARNING: CORINE not added: No data coverage for your study area."))
+         }
+
+
+
+         corine_r <- makeTiles(corine_v, value = "code", name = "corine")
+         rm(corine_v)
+
+
+         # ZONAL STATISTICS TO UPDATE MASTERMAP ----------------------------------------------------------
+
+         # Create a key from the rasters' levels to add the descriptions back into the mastermap after extraction
+         key <- as.data.frame(raster::levels(corine_r[[1]]))
+
+         mm <- mapply(function(x, n) extractRaster(x, corine_r, fun = "majority", tile = n, newcol = "corine"),
+                      x = mm,
+                      n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
+                      SIMPLIFY = FALSE)  # absolutely necessary
+
+         rm(corine_r)  # remove raster tiles
+
+         # Replace the factor levels by their code
+
+         mm <- lapply(mm, function(x) addAttributes(x, "corine", key))
+
+
+         ### And then replace the numeric codes by the text descriptions
+         mm <- lapply(mm, function(x)
+            dplyr::mutate(x,
+                          corine = dplyr::recode(x$corine, !!!corine_lookup, .default = as.factor(NA)))
+         )
+
+         rm(key)
+
+      } else if (corinetype %in% c("tif", "asc")){ # begin workflow for raster version
+
+         ## Import corine raster ------
+
+         # find the raster in the folder
+
+         filelist <- list.files(pattern = corinetype,  corinepath, recursive = TRUE, full.names = TRUE)
+
+         if (length(filelist) > 1) {
+            stop("More than one raster file found for CORINE. Make sure folder only contains one tif file.")
+         } else if (length(filelist) == 0){
+            stop("No raster file found for CORINE")
          } else {
-      guessFiletype(corinepath)
-   }
 
-   message("Preparing to update baseline with Corine data")
+            corine <- raster::raster(filelist)
+            suppressWarnings({
+               raster::crs(corine) <- "+init=epsg:3035"  # force raster to have CORINE CRS (European)
+            })
 
-   if (corinetype %in% c("gpkg", "shp")){ # begin workflow for vector version
+            rm(filelist)
+            # no need to import key as we can call corine_lookup_raster when we need it
 
-# DATA IMPORT ---------------------------------------------------------------------------------
 
-   ## Import Corine data
+            # DATA PREP -----------------------------------------------------------------------------------
 
-   corine <- loadSpatial(folder = corinepath, filetype = guessFiletype(corinepath))  # using the loading into list function in case there are many shp
+            # Set the extent to smaller area before reprojecting CORINE in OS ref -----
+            # If downloading the whole European data, OSGB can't be applied directly, and reprojection is slow anyway.
+            # We also can't crop directly to study area because they are in different projections and might lose bits around the edges
 
-   corine <- do.call(rbind, corine) %>% sf::st_as_sf()  # putting back into one single sf object
 
 
-   corine_cols <- projectLog$df[projectLog$df$dataset == "corine", ][["cols"]][[1]]
+            ex <- sf::st_as_sf(as(1.25*raster::extent(studyAreaBuffer), "SpatialPolygons")) %>% # create polygon out of study area extent
+               sf::st_set_crs(sf::st_crs(studyAreaBuffer)) %>%  # set its crs to enable transfo
+               sf::st_transform(3035)  # project it in Corine's projection (EPSG:3035)
 
-   # Rename columns if needed
-   corine <- dplyr::rename(corine, !!!corine_cols)
+            corine <- raster::writeRaster(
+               raster::crop(corine, ex),  # cropping corine data to this extent
+               filename = file.path(scratch_path, "corine"),
+               overwrite = TRUE)
 
+            corine <- raster::projectRaster(corine, crs = "+init=epsg:27700", method="ngb",
+                                            filename = file.path(scratch_path, "corine"),
+                                            overwrite = TRUE)
 
-   # Subset to only needed cols to lighten up the file
-   corine <- dplyr::select(corine, code)
+            # Mask to study area -----
 
+            # corine <- raster::writeRaster(
+            #          raster::mask(corine, studyAreaBuffer),
+            #          filename = file.path(scratch_path, "corine"),
+            #          overwrite = TRUE)
 
-   ## No need to import lookup table: it is built into the package so should just be called
 
+            ## Split into grid squares
 
-      # DATA PREP -----------------------------------------------------------------------------------
+            SAgrid <- suppressWarnings(sf::st_intersection(grid, sf::st_geometry(studyAreaBuffer)) %>%
+                                          sf::st_make) # clip grid to study area
+            SAgrid$TILE_NAME <- droplevels(SAgrid$TILE_NAME)  # keep only relevant tiles
 
-      message("Clipping Corine to study area...")
+            corine_list <- vector(mode = "list", length = length(SAgrid))
+            ## somehow lapply breaks so using a loop instead to chop up corine into named tiles
 
-      ## Corine is not in OSGB projection. We create a window slighly bigger than the study area in Corine's projection,
-      ## clip the data, and once we have our UK subset we can transform in OSGB.
+            for (i in 1:length(SAgrid)){
+               corine_list[[i]] <- raster::crop(corine, SAgrid[i,]) %>% raster::mask(SAgrid[i,])
+            }
 
-   # This extent is defined dynamically to be slightly bigger than the study area extent.
-   # Note: this code was in a nice log pipe, but breaks when used as a function...
+            names(corine_list) <- SAgrid$TILE_NAME
 
+            # Update MasterMap with CORINE field ----------------------------------------------------------
 
-      cliplayer <- sf::st_as_sf(methods::as(1.2 * raster::extent(studyAreaBuffer),
-                                            "SpatialPolygons"))
+            message("Extracting Corine data...")
 
-      cliplayer <- sf::st_set_crs(cliplayer,
-                                  sf::st_crs(studyAreaBuffer)) %>%  ## original crs gets lost
-         sf::st_transform(sf::st_crs(corine))
+            # Add new column with the main land cover class in each polygon
+            # This takes some time to run
 
+            #mm <- lapply(mm, function(x) extractRaster(sf = x, rast = corine, fun = "majority", newcol = "corine"))
 
-      corine <- suppressWarnings({
-         sf::st_intersection(corine, sf::st_geometry(cliplayer)) %>%  # subset corine
-            sf::st_transform(sf::st_crs(studyAreaBuffer)) %>%   # reproject in OS grid reference
-            sf::st_intersection(studyAreaBuffer) %>%  # clip to study area
-            sf::st_make_valid() %>%                      # check and repair geometry
-            sf::st_cast(to = "MULTIPOLYGON") %>%         # multi to single part
-            sf::st_cast(to = "POLYGON")
-      })
+            ## With named tiles we can extract more efficiently
 
-      rm(cliplayer)
+            mm <- mapply(function(x, n) extractRaster(x, corine_list, fun = "majority", tile = n, newcol = "corine"),
+                         x = mm,
+                         n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
+                         SIMPLIFY = FALSE)  # absolutely necessary
 
-      message("Extracting Corine data...")
 
+            # Replace numeric codes with text, using the builtin lookup table
 
-      ## Rasterize data (will create tiles if needed)
+            mm <- lapply(mm, function(x) addAttributes(x, "corine", corine_lookup_raster))
 
-      corine_v <- prepTiles(mm, corine, studyArea = studyAreaBuffer, value = "code")
-      rm(corine)
+            # remove objects
+            rm(corine, ex)
 
-      if(is.null(corine_v)){
+         }
 
-         projectLog$ignored <- c(projectLog$ignored, dsname)
-         updateProjectLog(projectLog)
 
-         return(message("WARNING: CORINE not added: No data coverage for your study area."))
-      }
+      } # end of workflow for raster version
 
 
 
-      corine_r <- makeTiles(corine_v, value = "code", name = "corine")
-      rm(corine_v)
+      # SAVE UPDATED MASTER MAP ---------------------------------------------------------------------
 
+      saveRDS(mm, file.path(output_temp, paste0(title, "_MM_03.RDS")))
 
-      # ZONAL STATISTICS TO UPDATE MASTERMAP ----------------------------------------------------------
 
-      # Create a key from the rasters' levels to add the descriptions back into the mastermap after extraction
-      key <- as.data.frame(raster::levels(corine_r[[1]]))
+      # Update the project log with the information that map was updated
 
-      mm <- mapply(function(x, n) extractRaster(x, corine_r, fun = "majority", tile = n, newcol = "corine"),
-                   x = mm,
-                   n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
-                   SIMPLIFY = FALSE)  # absolutely necessary
+      projectLog$last_success <- "MM_03.RDS"
 
-      rm(corine_r)  # remove raster tiles
+      updateProjectLog(projectLog) # save revised log
 
-      # Replace the factor levels by their code
+      # and delete contents of scratch folder
+      cleanUp(scratch_path)
 
-      mm <- lapply(mm, function(x) addAttributes(x, "corine", key))
+      timeB <- Sys.time() # stop time
 
+      message(paste0("Finished updating with Corine data. Process took ",
+                     round(difftime(timeB, timeA, units = "mins"), digits = 1),
+                     " minutes."))
 
-      ### And then replace the numeric codes by the text descriptions
-      mm <- lapply(mm, function(x)
-         dplyr::mutate(x,
-                corine = dplyr::recode(x$corine, !!!corine_lookup, .default = as.factor(NA)))
-      )
 
-      rm(key)
-
-} else if (corinetype %in% c("tif", "asc")){ # begin workflow for raster version
-
-## Import corine raster ------
-
-# find the raster in the folder
-
-   filelist <- list.files(pattern = corinetype,  corinepath, recursive = TRUE, full.names = TRUE)
-
-   if (length(filelist) > 1) {
-      stop("More than one raster file found for CORINE. Make sure folder only contains one tif file.")
-   } else if (length(filelist) == 0){
-      stop("No raster file found for CORINE")
-   } else {
-
-corine <- raster::raster(filelist)
-suppressWarnings({
-raster::crs(corine) <- "+init=epsg:3035"  # force raster to have CORINE CRS (European)
-})
-
-rm(filelist)
- # no need to import key as we can call corine_lookup_raster when we need it
-
-
-# DATA PREP -----------------------------------------------------------------------------------
-
-# Set the extent to smaller area before reprojecting CORINE in OS ref -----
-# If downloading the whole European data, OSGB can't be applied directly, and reprojection is slow anyway.
-# We also can't crop directly to study area because they are in different projections and might lose bits around the edges
-
-
-
-ex <- sf::st_as_sf(as(1.25*raster::extent(studyAreaBuffer), "SpatialPolygons")) %>% # create polygon out of study area extent
-         sf::st_set_crs(sf::st_crs(studyAreaBuffer)) %>%  # set its crs to enable transfo
-         sf::st_transform(3035)  # project it in Corine's projection (EPSG:3035)
-
-corine <- raster::writeRaster(
-         raster::crop(corine, ex),  # cropping corine data to this extent
-         filename = file.path(scratch_path, "corine"),
-         overwrite = TRUE)
-
-corine <- raster::projectRaster(corine, crs = "+init=epsg:27700", method="ngb",
-                              filename = file.path(scratch_path, "corine"),
-                              overwrite = TRUE)
-
-# Mask to study area -----
-
-# corine <- raster::writeRaster(
-#          raster::mask(corine, studyAreaBuffer),
-#          filename = file.path(scratch_path, "corine"),
-#          overwrite = TRUE)
-
-
-## Split into grid squares
-
-SAgrid <- suppressWarnings(sf::st_intersection(grid, sf::st_geometry(studyAreaBuffer)) %>%
-                              sf::st_make) # clip grid to study area
-SAgrid$TILE_NAME <- droplevels(SAgrid$TILE_NAME)  # keep only relevant tiles
-
-corine_list <- vector(mode = "list", length = length(SAgrid))
-   ## somehow lapply breaks so using a loop instead to chop up corine into named tiles
-
-for (i in 1:length(SAgrid)){
-   corine_list[[i]] <- raster::crop(corine, SAgrid[i,]) %>% raster::mask(SAgrid[i,])
-}
-
-names(corine_list) <- SAgrid$TILE_NAME
-
-# Update MasterMap with CORINE field ----------------------------------------------------------
-
-message("Extracting Corine data...")
-
-   # Add new column with the main land cover class in each polygon
-   # This takes some time to run
-
-   #mm <- lapply(mm, function(x) extractRaster(sf = x, rast = corine, fun = "majority", newcol = "corine"))
-
-## With named tiles we can extract more efficiently
-
-   mm <- mapply(function(x, n) extractRaster(x, corine_list, fun = "majority", tile = n, newcol = "corine"),
-                x = mm,
-                n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
-                SIMPLIFY = FALSE)  # absolutely necessary
-
-
-   # Replace numeric codes with text, using the builtin lookup table
-
-   mm <- lapply(mm, function(x) addAttributes(x, "corine", corine_lookup_raster))
-
-   # remove objects
-   rm(corine, ex)
-
-   }
-
-
-   } # end of workflow for raster version
-
-
-
-   # SAVE UPDATED MASTER MAP ---------------------------------------------------------------------
-
-   saveRDS(mm, file.path(output_temp, paste0(title, "_MM_03.RDS")))
-
-
-   # Update the project log with the information that map was updated
-
-   projectLog$last_success <- "MM_03.RDS"
-
-   updateProjectLog(projectLog) # save revised log
-
-   # and delete contents of scratch folder
-   cleanUp(scratch_path)
-
-   timeB <- Sys.time() # stop time
-
-   message(paste0("Finished updating with Corine data. Process took ",
-                  round(difftime(timeB, timeA, units = "mins"), digits = 1),
-           " minutes."))
-
-
-} else {message("No CORINE land cover data input specified.")}
+   } else {message("No CORINE land cover data input specified.")}
 
    return({
       invisible({

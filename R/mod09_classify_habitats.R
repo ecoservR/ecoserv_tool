@@ -39,27 +39,25 @@ classify_map <- function(mm = parent.frame()$mm,
 
    ## Extract parameters from project log -----
 
-   # arable_min <- projectLog$params
-   # gardenshape
-   # gardensize
-   # housemax
-   # housemin
-   # improved_max
-   # montane
-   # slope_dry
-   # slope_semi
-   # slope_unimp
-   # upland
+   params <- projectLog$params
+
+
+   ## Check that mm is right format
+
+      if (!inherits(mm, "list")){
+      mm <- list(mm)
+   }
 
 
    # Preparation -------------------------------------------------------------
 
    # Make sure we have single-part polygons and calculate area afresh
 
-   mm <- lapply(mm, function(x)
-      dplyr::mutate(x,
-             shp_area = as.numeric(sf::st_area(x)),
-             shp_length = as.numeric(lwgeom::st_perimeter(x))) %>%
+   mm <- lapply(mm, function(x) checkgeometry(x, "POLYGON") %>%
+                   dplyr::mutate(
+                      shp_area = as.numeric(sf::st_area(x)),
+                      shp_length = as.numeric(lwgeom::st_perimeter(x))) %>%
+         # calculate shape index
          dplyr::mutate(
             shp_index = (pi * ((shp_length / (2 * pi)) ^ 2)) / shp_area
          )
@@ -68,11 +66,45 @@ classify_map <- function(mm = parent.frame()$mm,
 
    ### maybe we could work on a non-spatial object (indexed) and merge back into basemap after?
 
+   attributes <- unique(unlist(lapply(mm, function(x) names(x))))
 
 
+# First round of classification -------------------------------------------
+
+# First we need to make sure there is a GI column (sometimes there is no coverage of OS Greenspace / Open Greenspace for small or rural sites) as it is needed in the classif_mastermap function.
+
+   if (!"GI" %in% attributes){
+      mm <- lapply(mm, function(x) create_GI(x, params))
+   }
 
 
+# This is the main classification step and based on MasterMap, GI, and parameters only.
 
+   mm <- lapply(mm, function(x) classif_mastermap(x, params))
+
+
+# Refine with more GI rules
+
+   mm <- lapply(mm, function(x) classif_green(x))
+
+
+# Additional classification -----------------------------------------------
+
+## Depending on datasets, additional classification
+
+# Priority Habitats
+
+if ("phi" %in% attributes){
+
+   mm <- lapply(mm, function(x) classif_phi(x))
+}
+
+# Crome and Corine
+
+   if (any(c("crome", "corine") %in% attributes)){
+
+   mm <- lapply(mm, function(x) classif_agri(x))
+   }
 
 
 
