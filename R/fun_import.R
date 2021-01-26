@@ -6,13 +6,49 @@
 #######################################
 
 
+#' Automatically Detect File Type
+#'
+#' Not intended to be called by user. Used in pre-processing to detect whether spatial files (vector data) are in an acceptable format. Accepted file extensions are "gpkg", "shp", "json", "gz", "gml", "tab".
+
+#' @param path Folder where files are stored
+#' @return A character string to be fed into loadSpatial.
+#'
+#' @export
+guessFiletype <- function(path){
+
+   if (!dir.exists(path)) stop(paste0("Folder '", path,"' not found. Please check directory path."))
+
+   accepted <- c(".gpkg$", ".shp$", ".json$", ".gz$", ".gml$", ".tab$")
+
+   detected <- list.files(path, pattern = paste0(accepted, collapse="|"),
+                          recursive = TRUE,
+                          full.names = TRUE,
+                          ignore.case = TRUE)
+
+   if (length(detected) == 0) stop("No spatial files found.")
+
+   ## Narrow down to the format(s) present in folder
+   format <- accepted[unlist(lapply(seq_along(accepted),
+                                    function(x)
+                                       any(grepl(accepted[x], detected, ignore.case = TRUE))
+   ))]
+
+   if (length(format) > 1) stop(paste0("Multiple spatial formats found in '", path, "': ", paste0(format, collapse = ", ")))
+
+   return(format)
+
+}
+
+
+# New loadSpatial function ------------------------------------------------
+
 #' Load Spatial Data
 #'
 #' This function looks into a folder for a specified file type and loads all corresponding files into a list.
 
 #' @param folder Folder where spatial file or files are stored
 #' @param layer Layer name if several layers present in folder
-#' @param filetype File format, either "gpkg" for geopackage or "shp" for shapefile
+#' @param filetype File format. Accepted file extensions are "gpkg", "shp", "json", "gz", "gml", "tab".
 #' @return A list of spatial files
 #' @export
 
@@ -21,27 +57,27 @@ loadSpatial <- function(folder, layer = NULL, filetype){
    # layer is the layer name, without extension (e.g. topographicLine, topographicArea...)
    # filetype is the format, currently supporting gpkg, shp
 
-   ## IMPORT FOR SHAPEFILES
-   if (filetype == "shp"){
+   ## List all acceptable spatial files in folder
+   fileList <- list.files(folder, pattern = paste0(filetype, collapse="|"),
+                          recursive = TRUE, full.names = TRUE,
+                          ignore.case = TRUE)
 
-      # Create list of files matching the file format in the folder specified by user
-      fileList <- list.files(folder, pattern='.shp$',
-                             all.files=TRUE,
-                             recursive = TRUE,  # recursive means looking into subfolders
-                             full.names=FALSE)  # full name FALSE means that we get the file name only
+   ## Handling for shapefiles is different than for the rest as layers need to be specified (if specifying folder only, just the first shp will be read)
+
+   if(grepl("shp", filetype)){
 
       # If layer specified, subset to just this (otherwise lists all layers to be imported)
       if (!is.null(layer)){
-         fileList <- fileList[grepl(layer, fileList)]
+         fileList <- fileList[grepl(layer, fileList, ignore.case = TRUE)]
       }
 
       # get the full path for each layer
-      dsn_paths <- lapply(fileList, function(x) file.path(folder, dirname(x)))
+      dsn_paths <- lapply(fileList, function(x) file.path(dirname(x)))
 
       # and simplify shapefile names in original list to get layer name (remove directories and extensions)
       fileList <- lapply(fileList, function(x)
-         sub(pattern = "(.*)\\..*$",
-             replacement = "\\1", basename(x)))
+         sub(pattern = filetype,
+             replacement = "\\1", basename(x), ignore.case = TRUE))  # remove extension from file name
 
 
 
@@ -54,69 +90,35 @@ loadSpatial <- function(folder, layer = NULL, filetype){
       return(imported)
       rm(fileList, dsn_paths)
 
-      ## IMPORT FOR GEOPACKAGES
-   } else if (filetype == "gpkg"){  # for a geopackage
+   } else {
 
-      # Create list of geopackage files in the specified folder
-      fileList <- list.files(folder, pattern='.gpkg$',
-                             all.files=TRUE, recursive = TRUE,
-                             full.names=FALSE)  # full name FALSE means that we get the file name only
+      ## For geopackages and other single files, we only want to specify the layer name if we know the dataset is likely to come in a bundle of layers; otherwise we read the first (and probably only) layer
+
+      # # Create list of geopackage files in the specified folder
+      # fileList <- list.files(folder, pattern = filetype,
+      #                        all.files=TRUE, recursive = TRUE, ignore.case = TRUE,
+      #                        full.names=TRUE)  # full name FALSE means that we get the file name only
 
       if (is.null(layer)) { # if no layer specified, will load the first layer available
-         imported <- lapply(fileList, function(x) sf::st_read(dsn = file.path(folder, x)))
+
+         if (length(unique(sf::st_layers(fileList[[1]])$name)) > 1) message(paste0(
+            "Multiple layers found in '",
+            fileList[[1]],
+            "': \n importing first layer '",
+            sf::st_layers(fileList[[1]])$name[[1]],
+            "'."))
+
+         imported <- lapply(fileList, function(x) sf::st_read(dsn = x))
       } else {
 
          # for each file in the list, read the selected layer into a new list and return it
-         imported <- lapply(fileList, function(x) sf::st_read(dsn = file.path(folder, x), layer = layer))
+         imported <- lapply(fileList, function(x) sf::st_read(dsn = x,
+                                                              layer = layer))
       }
       return(imported)
 
-   } else {
-      print("File format not currently supported")
    }
-
-} # end of function
-
-
-
-
-#' Automatically Detect File Type
-#'
-#' Not intended to be called by user. Used in pre-processing to detect whether spatial files are of a geopackage or shapefile format.
-
-#' @param path Folder where files are stored
-#' @return A character string, "gpkg" or "shp", to be fed into loadSpatial
-#' @export
-guessFiletype <- function(path){
-
-if (!dir.exists(path)) stop("Folder not found. Please check directory path.")
-
-if (length(list.files(path, pattern = ".shp", recursive = TRUE)) > 0 &
-    length(list.files(path, pattern = ".gpkg", recursive = TRUE)) ==  0){
-
-   return("shp")} else
-
-      if (length(list.files(path, pattern = ".shp", recursive = TRUE)) == 0
-          & length(list.files(path, pattern = ".gpkg", recursive = TRUE)) > 0){
-
-         return("gpkg")
-
-      } else
-
-         if (length(list.files(path, pattern = ".shp", recursive = TRUE)) == 0 &
-             length(list.files(path, pattern = ".gpkg", recursive = TRUE)) == 0){
-
-            stop("No spatial files found. (Must be shapefile or geopackage)")
-
-         } else
-
-            if (length(list.files(path, pattern = ".shp", recursive = TRUE)) > 0 &
-                length(list.files(path, pattern = ".gpkg", recursive = TRUE)) > 0){
-               stop("Files must be either shapefiles or geopackage, not both.")
-            }
-
 }
-
 
 
 #' Import Designated Areas

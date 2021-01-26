@@ -10,8 +10,8 @@ guessFiletype(path)
 \item{path}{Folder where files are stored}
 }
 \value{
-A character string, "gpkg" or "shp", to be fed into loadSpatial
+A character string to be fed into loadSpatial.
 }
 \description{
-Not intended to be called by user. Used in pre-processing to detect whether spatial files are of a geopackage or shapefile format.
+Not intended to be called by user. Used in pre-processing to detect whether spatial files (vector data) are in an acceptable format. Accepted file extensions are "gpkg", "shp", "json", "gz", "gml", "tab".
 }

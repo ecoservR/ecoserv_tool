@@ -11,7 +11,7 @@ loadSpatial(folder, layer = NULL, filetype)
 
 \item{layer}{Layer name if several layers present in folder}
 
-\item{filetype}{File format, either "gpkg" for geopackage or "shp" for shapefile}
+\item{filetype}{File format. Accepted file extensions are "gpkg", "shp", "json", "gz", "gml", "tab".}
 }
 \value{
 A list of spatial files
