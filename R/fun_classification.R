@@ -529,8 +529,7 @@ create_GI <- function(x, params){
 
          Group == "Natural Environment" ~ "Natural",
 
-         Make == "Multiple" & Term == "Multi Surface" & Group == "General Surface" &
-            shp_area < params$gardensize & shp_index < params$gardenshape ~ "Private Garden", # most frequent combination for Private Garden
+         Make == "Multiple" & Term == "Multi Surface" & Group == "General Surface" & shp_area < params$gardensize & shp_index < params$gardenshape ~ "Private Garden", # most frequent combination for Private Garden
 
          Group == "General Surface" & Make == "Natural" ~ "Undertermined Greenspace"
 

@@ -39,7 +39,7 @@ classify_map <- function(mm = parent.frame()$mm,
 
    ## Extract parameters from project log -----
 
-   params <- projectLog$params
+   params <- projectLog$parameters
 
 
    ## Check that mm is right format
