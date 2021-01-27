@@ -106,6 +106,11 @@ if ("phi" %in% attributes){
    mm <- lapply(mm, function(x) classif_agri(x))
    }
 
-
+   # Return mm to environment
+   return({
+      invisible({
+         mm <<- mm
+      })
+   })
 
 } # end of function

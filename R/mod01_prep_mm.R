@@ -117,9 +117,9 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                 function(x)
                    dplyr::filter(x,
                                  PhysicalLevel != "51",  # remove things above ground level
-                                 !grepl("Landform", x$Group)  # remove any group with landform in description
+                                 Group != "Landform"  # remove any group with landform in description
                    ) %>%
-                   dplyr::select(-PhysicalLevel)
+                   dplyr::select(names(mm_cols))
 
    )
 
