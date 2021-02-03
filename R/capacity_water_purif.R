@@ -174,7 +174,7 @@ capacity_water_purif <- function(x, studyArea, DTM = NULL, spr = NULL,
                           35, 45, 20,
                           45, Inf, 10),
                         include.lowest = TRUE,
-                        filename = file.path(scratch, "slopes"), overwrite = TRUE)
+                        filename = file.path(scratch, "slopesrcl"), overwrite = TRUE)  # note: saving under new name, overwriting may cause unexpected behaviour
 
 
    ### Create raster template with same properties as mastermap -----
