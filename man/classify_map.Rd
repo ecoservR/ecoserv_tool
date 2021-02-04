@@ -14,7 +14,7 @@ classify_map(mm = parent.frame()$mm, projectLog = parent.frame()$projectLog)
 \item{studyAreaBuffer}{The buffered study area generated during mod01 or reloaded when resuming a session.}
 }
 \value{
-Saves a project_title_MM_07.RDS file to project folder
+Saves a project_title_MM_classified.RDS file to project folder
 }
 \description{
 This function assigns a habitat type (modified from Phase 1 codes) to each polygon in the basemap according to the information available. Requires at least the basemap preparation function to have run, and optionally (and ideally) also considers CORINE, Priority Habitats, the Crop Map of England, hedgerows, and elevation data.

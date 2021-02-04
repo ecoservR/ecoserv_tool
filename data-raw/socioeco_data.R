@@ -6,6 +6,8 @@
 
 ### Notes
 
+## TO DO: run with the updated Risk group (considering children as well as over 65). Code has been updated but not re-run as the tiles take so long to upload to Git.
+
 ## This script is meant to regenerate tiles for socio economic data whenever a new IMD or census dataset becomes available.
 ## Currently the population data is extracted straight from EcoservGIS: when 2021 census data becomes available this will need updating.
 
@@ -25,9 +27,10 @@ imd <- readRDS("C://Basemapper/builtin/IMD_2019/IMD.RDS")
 
 imd <- dplyr::select(imd, health = HDDScore)
 
-census <- dplyr::select(census,
-                       housePop = House_Pop,
-                       riskgroup = Risk_group)
+census <- census %>%
+   dplyr::mutate(Risk_group = (under10 + o65plus)/all_people) %>%  # recalculate risk group to include children and elderly
+   dplyr::select(housePop = House_Pop,
+                 riskgroup = Risk_group)
 
 
 ## Tidy up geometry
@@ -92,3 +95,6 @@ tq <- census$TQ
 
 saveRDS(dplyr::select(tq[1:21000, ], -gridref), file = paste0("inst/extdata/census/census_", "TQa", ".RDS"))
 saveRDS(dplyr::select(tq[21001:nrow(tq), ], -gridref), file = paste0("inst/extdata/census/census_", "TQb", ".RDS"))
+
+
+
