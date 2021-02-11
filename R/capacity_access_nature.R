@@ -307,13 +307,13 @@ capacity_access_nature <- function(x, studyArea,
 
    final_all_scaled <- raster::writeRaster(
       final_all/maxvalall*100,  # rescale from 0-100
-      filename = file.path(save, paste(runtitle, "access_nature_all_capacity_rescaled.tif", sep="_")),
+      filename = file.path(save, paste(projectLog$title, runtitle, "access_nature_all_capacity_rescaled.tif", sep="_")),
       overwrite = TRUE  # perhaps not desirable but for now prevents error messages
    )
 
    final_access_scaled <- raster::writeRaster(
       final_access/maxvalacc*100,  # rescale from 0-100
-      filename = file.path(save, paste(runtitle, "access_nature_accessOnly_capacity_rescaled.tif", sep="_")),
+      filename = file.path(save, paste(projectLog$title, runtitle, "access_nature_accessOnly_capacity_rescaled.tif", sep="_")),
       overwrite = TRUE  # perhaps not desirable but for now prevents error messages
    )
 
