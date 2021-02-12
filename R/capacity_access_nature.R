@@ -291,13 +291,13 @@ capacity_access_nature <- function(x, studyArea,
 
    final_all <- raster::writeRaster(
       raster::mask(score_all_r, studyArea),
-      filename = file.path(save, paste(runtitle, "access_nature_all_capacity.tif", sep="_")),
+      filename = file.path(save, paste(projectLog$title, runtitle, "access_nature_all_capacity.tif", sep="_")),
       overwrite = TRUE
    )
 
    final_access <- raster::writeRaster(
       raster::mask(score_access_r, studyArea),
-      filename = file.path(save, paste(runtitle, "access_nature_accessOnly_capacity.tif", sep="_")),
+      filename = file.path(save, paste(projectLog$title, runtitle, "access_nature_accessOnly_capacity.tif", sep="_")),
       overwrite = TRUE
    )
 
