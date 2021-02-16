@@ -35,6 +35,14 @@ add_socioeco <- function(mm = parent.frame()$mm,
    timeA <- Sys.time() # start time
 
 
+   ## Extract the file paths and other info from project log ----------------------
+
+   output_temp <- projectLog$output_temp
+   title <- projectLog$title
+   scratch_path <- file.path(output_temp, "ecoservR_scratch")
+   if (!dir.exists(scratch_path)) dir.create(scratch_path)
+
+
 
 
 # Identify which tiles need loading ---------------------------------------
