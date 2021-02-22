@@ -119,7 +119,10 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                                  PhysicalLevel != "51",  # remove things above ground level
                                  Group != "Landform"  # remove any group with landform in description
                    ) %>%
-                   dplyr::select(names(mm_cols))
+                   dplyr::select(names(mm_cols)) %>%
+                   dplyr::mutate(TOID = gsub("[a-zA-Z ]", "", TOID))
+                # Change TOID to numeric characters only
+                # (sometimes prefixed by osgb)
 
    )
 
