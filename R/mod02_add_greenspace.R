@@ -22,128 +22,135 @@ add_greenspace <- function(mm = parent.frame()$mm,
 
    timeA <- Sys.time() # start time
 
-# NOTES ---------------------------------------------------------------------------------------
+   # NOTES ---------------------------------------------------------------------------------------
 
-# This script first updates the map with OS Greenspace (master version) if available
-# Then it uses OS Open Greenspace on anything that has not been classified by the licensed version.
+   # This script first updates the map with OS Greenspace (master version) if available
+   # Then it uses OS Open Greenspace on anything that has not been classified by the licensed version.
 
 
-## Extract the file paths and other info from project log ----------------------
+   ## Extract the file paths and other info from project log ----------------------
 
    output_temp <- projectLog$output_temp
    title <- projectLog$title
    scratch_path <- file.path(output_temp, "ecoservR_scratch")
    if (!dir.exists(scratch_path)) dir.create(scratch_path)
 
-# OS GREENSPACE
-greenpath <- projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["path"]]  # path to the OS MasterMap Greenspace data, if available
+   # OS GREENSPACE
+   greenpath <- projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["path"]]  # path to the OS MasterMap Greenspace data, if available
 
 
 
-# OS OPEN GREENSPACE
-opengreenpath <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["path"]]  # path to OS Open Greenspace (REQUIRED)
+   # OS OPEN GREENSPACE
+   opengreenpath <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["path"]]  # path to OS Open Greenspace (REQUIRED)
 
-dsname <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["prettynames"]]
+   dsname <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["prettynames"]]
 
-opengreenlayer <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["layer"]] # layer name
-opengreentype <- guessFiletype(opengreenpath) # data type, automatically determined
+   opengreenlayer <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["layer"]] # layer name
+   opengreentype <- guessFiletype(opengreenpath) # data type, automatically determined
 
-opengreen_cols <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["cols"]][[1]] # coerce to named character (remove list nesting)
+   opengreen_cols <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["cols"]][[1]] # coerce to named character (remove list nesting)
 
 
-# DATA IMPORT ---------------------------------------------------------------------------------
+   # DATA IMPORT ---------------------------------------------------------------------------------
 
-## Import the greenspace master map, if present
-# Stored in tiles of 5km and all go in list, regardless of whether or not they are in sub-directories. Only runs if user specified a path.
+   ## Import the greenspace master map, if present
+   # Stored in tiles of 5km and all go in list, regardless of whether or not they are in sub-directories. Only runs if user specified a path.
 
    if (!is.na(greenpath) & !is.null(greenpath)){ # if greenpath is empty, skipping this step
 
-   green_cols <- projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["cols"]][[1]] # coerce to named character (remove list nesting)
+      green_cols <- projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["cols"]][[1]] # coerce to named character (remove list nesting)
 
-   greentype <- guessFiletype(greenpath) # data type; either gpkg or shp, automatically determined
+      greentype <- guessFiletype(greenpath) # data type; either gpkg or shp, automatically determined
 
-   green <- loadSpatial(folder = greenpath, filetype = greentype)   # looks for and imports any shapefile within this folder, initially in a list
+      green <- loadSpatial(folder = greenpath, filetype = greentype)   # looks for and imports any shapefile within this folder, initially in a list
    }
 
 
-# GREENSPACE CLEANING -------------------------------------------------------------------------
+   # GREENSPACE CLEANING -------------------------------------------------------------------------
 
-# Doing these operations on list elements because faster than using distinct() on the full combined data object.
-# This long section will only run if user has loaded a MasterMap Greenspace dataset.
+   # Doing these operations on list elements because faster than using distinct() on the full combined data object.
+   # This long section will only run if user has loaded a MasterMap Greenspace dataset.
 
-if (exists("green")){
+   if (exists("green")){
       message("Updating MasterMap with OS Greenspace")
 
-   ### Rename columns in case they are different for user
-   for (i in 1:length(green)){
-      green[[i]] <- dplyr::rename(green[[i]], !!green_cols)
-   }
+      ### Rename columns in case they are different for user
+      for (i in 1:length(green)){
+         green[[i]] <- dplyr::rename(green[[i]], !!green_cols)
+      }
 
-   # Clean the green object to keep only what we need
+      # Clean the green object to keep only what we need
 
-   green <- lapply(green, function(x) dplyr::select(x, TOID, priFunc) %>%  # keep only needed cols before merge
+      green <- lapply(green, function(x) dplyr::select(x, TOID, priFunc) %>%  # keep only needed cols before merge
                          dplyr::mutate(TOID = gsub("[a-zA-Z ]", "", TOID))   # remove the "osgb" characters from the TOID column
-   )
+      )
 
 
-  ### Remove duplicated polygons (custom function) -----
+      ### Remove duplicated polygons (custom function) -----
 
-  green <- removeDuplicPoly(green, ID = "TOID")
+      green <- removeDuplicPoly(green, ID = "TOID")
 
 
-   ### Remove empty features -----
-   # If the user downloaded tiles for the whole study area, some of them might be completely empty and cause further steps to crash because of NA coordinates, so they get removed here.
+      ### Remove empty features -----
+      # If the user downloaded tiles for the whole study area, some of them might be completely empty and cause further steps to crash because of NA coordinates, so they get removed here.
 
-   green <- green[sapply(green, function(x) dim(x)[1]) > 0]
+      green <- green[sapply(green, function(x) dim(x)[1]) > 0]
 
-   ### Crop to the study area -----
+      ### Crop to the study area -----
 
-   green <- checkcrs(green, studyAreaBuffer)  # check CRS and transform if required
+      green <- checkcrs(green, studyAreaBuffer)  # check CRS and transform if required
 
-   green <- suppressWarnings(  # forcing the crs for compatibility in clipping function
+      green <- suppressWarnings(  # forcing the crs for compatibility in clipping function
          lapply(green, function(x) sf::st_set_crs(x, 27700)))
 
-   ## Make sure features are clean before cropping
+      ## Make sure features are clean before cropping
 
-   green <- checkgeometry(green, "POLYGON")
+      green <- checkgeometry(green, "POLYGON")
 
-   ## Crop each tile to study area
-   #(the loop is written so that only polygons falling on the edge are clipped)
-   message("Clipping Greenspace to study area")
-   green <- suppressWarnings(
-      lapply(green, function(x) faster_intersect(x, studyAreaBuffer))
-   )
-
-
- ### Removing empty objects -----
-
-   # Some list items can become empty after removing duplicates or cropping to the study area (not good coverage in rural zones)
-
-  green <- green[!is.na(green)]      # remove NAs generated when tile was fully out of study area
-  green <- green[sapply(green, function(x) dim(x)[1]) > 0]  # drops objects with empty geometries after clipping
+      ## Crop each tile to study area
+      #(the loop is written so that only polygons falling on the edge are clipped)
+      message("Clipping Greenspace to study area")
+      green <- suppressWarnings(
+         lapply(green, function(x) faster_intersect(x, studyAreaBuffer))
+      )
 
 
-   ### Bind all elements of the list together in one object -----
+      ### Removing empty objects -----
 
-   # Drop geometry
-   green <- lapply(green, function(x) sf::st_drop_geometry(x))
+      # Some list items can become empty after removing duplicates or cropping to the study area (not good coverage in rural zones)
 
-   green <- data.table::rbindlist(green)
+      green <- green[!is.na(green)]      # remove NAs generated when tile was fully out of study area
+      green <- green[sapply(green, function(x) dim(x)[1]) > 0]  # drops objects with empty geometries after clipping
 
 
+      ### Bind all elements of the list together in one object -----
 
-# UPDATE MASTERMAP WITH GREENSPACE ------------------------------------------------------------
+      # Drop geometry
+      green <- lapply(green, function(x) sf::st_drop_geometry(x))
 
-   ### Perform merge based on TOID -----
+      green <- data.table::rbindlist(green)
 
-   # for each mm list element, merge (left join) with toid of greenspace, return list of updated objects
 
-   mm <- lapply(mm, function(x) dplyr::left_join(x, green, by = c("TOID")))
+      ### There could be no features within the study area. We only do the following if there are features to match, and otherwise return a message.
 
-      rm(green)
+      if (nrow(green) > 0){
 
-      message("Finished updating with OS Greenspace")
-      rm(i)
+
+         # UPDATE MASTERMAP WITH GREENSPACE ------------------------------------------------------------
+
+         ### Perform merge based on TOID -----
+
+         # for each mm list element, merge (left join) with toid of greenspace, return list of updated objects
+
+         mm <- lapply(mm, function(x) dplyr::left_join(x, green, by = c("TOID")))
+
+         rm(green)
+
+         message("Finished updating with OS Greenspace")
+         rm(i)
+
+      } else {message("No Greenspace features within your study area.")}
+
    } else {
       mm <- lapply(mm, function(x) dplyr::mutate(x, priFunc = NA))  # if not using Greenspace, create empty columns so classification rules still apply
       message("No OS Greenspace data provided, skipping to Open Greenspace.")
@@ -153,26 +160,26 @@ if (exists("green")){
    if (!is.null(opengreenpath) & !is.na(opengreenpath)){
 
 
-# OPEN GREENSPACE CLEANING --------------------------------------------------------------------
+      # OPEN GREENSPACE CLEANING --------------------------------------------------------------------
 
 
-   # Import the OPEN greenspace map (required)
+      # Import the OPEN greenspace map (required)
 
-   opengreen <- loadSpatial(folder = opengreenpath, layer = opengreenlayer, filetype = opengreentype)
-   opengreen <- do.call(rbind, opengreen) %>% sf::st_as_sf()  # remove from list and store into one sf object
-
-
-   message("Updating MasterMap with OS Open Greenspace")
-
-   # Rename columns
-   opengreen <- dplyr::rename(opengreen, !!opengreen_cols)
+      opengreen <- loadSpatial(folder = opengreenpath, layer = opengreenlayer, filetype = opengreentype)
+      opengreen <- do.call(rbind, opengreen) %>% sf::st_as_sf()  # remove from list and store into one sf object
 
 
-   ### Crop layer to study area and tidy up ----
+      message("Updating MasterMap with OS Open Greenspace")
 
-   # Check projection: make sure same as studyAreaBuffer so we can clip
+      # Rename columns
+      opengreen <- dplyr::rename(opengreen, !!opengreen_cols)
 
-   opengreen <- checkcrs(opengreen, studyAreaBuffer)
+
+      ### Crop layer to study area and tidy up ----
+
+      # Check projection: make sure same as studyAreaBuffer so we can clip
+
+      opengreen <- checkcrs(opengreen, studyAreaBuffer)
 
       opengreen <- opengreen %>%
          dplyr::select(id, op_function) %>%           # keep only needed cols
@@ -186,16 +193,16 @@ if (exists("green")){
       #    sf::st_cast(to = "POLYGON", warn = FALSE)        # equivalent of multi-part to single part
 
 
-# RASTERIZE OPEN GREENSPACE -------------------------------------------------------------------
+      # RASTERIZE OPEN GREENSPACE -------------------------------------------------------------------
 
-## Rasterize OPEN greenspace
+      ## Rasterize OPEN greenspace
 
-# The prepTiles function (custom function) will check if the data can be handled in memory.
-# If so, it will not tile the dataset but just put it in a list. If the dataset is too large, it will get cropped to 10x10km tiles that can then be rasterized in turn.
+      # The prepTiles function (custom function) will check if the data can be handled in memory.
+      # If so, it will not tile the dataset but just put it in a list. If the dataset is too large, it will get cropped to 10x10km tiles that can then be rasterized in turn.
 
-opengreen <- prepTiles(mm, opengreen, studyArea = studyAreaBuffer, value = "op_function")
+      opengreen <- prepTiles(mm, opengreen, studyArea = studyAreaBuffer, value = "op_function")
 
-## Rasterize and extract into basemap, unless there is no coverage at all in study area (in which case we exit the function early with a message)
+      ## Rasterize and extract into basemap, unless there is no coverage at all in study area (in which case we exit the function early with a message)
 
       if(is.null(opengreen)){
 
@@ -207,12 +214,12 @@ opengreen <- prepTiles(mm, opengreen, studyArea = studyAreaBuffer, value = "op_f
       }
 
 
-# We then feed this list object of vector tiles into the makeTiles function (another custom function).
-# This will rasterize the vector data into a list of tiles stored temporarily on disk: this prevents running into memory issues for large datasets.
+      # We then feed this list object of vector tiles into the makeTiles function (another custom function).
+      # This will rasterize the vector data into a list of tiles stored temporarily on disk: this prevents running into memory issues for large datasets.
 
-opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
-                     scratch = scratch_path,
-                     name = "opgreen")  # ref name for the temp files
+      opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
+                             scratch = scratch_path,
+                             name = "opgreen")  # ref name for the temp files
 
       # Create a key from the rasters' levels to add the descriptions back into the mastermap after extraction
       key <- as.data.frame(raster::levels(opgreen_r[[1]]))
@@ -222,9 +229,9 @@ opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
 
 
 
-# ZONAL STATISTICS OPEN GREENSPACE ------------------------------------------------------------
+      # ZONAL STATISTICS OPEN GREENSPACE ------------------------------------------------------------
 
-# Extract raster values into basemap. If working with named tiles, the function matches tiles 1 to 1 and the process is much faster.
+      # Extract raster values into basemap. If working with named tiles, the function matches tiles 1 to 1 and the process is much faster.
 
       mm <- mapply(function(x, n) extractRaster(x, opgreen_r,
                                                 fun = "majority",
@@ -251,11 +258,11 @@ opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
    # create a function with all the rules
    classGI <- function(x) {
       dplyr::mutate(x,
-             GI = dplyr::case_when(
-                !is.na(priFunc) ~ as.character(priFunc),    # if there's a code from master green, use it
-                is.na(priFunc) & is.na(GI_function) ~ "Not Greenspace",   # all NAs mean no greenspace
-                is.na(priFunc) & !is.na(GI_function) ~ as.character(GI_function) # if not filled from master and open is present, use that
-             )) %>%
+                    GI = dplyr::case_when(
+                       !is.na(priFunc) ~ as.character(priFunc),    # if there's a code from master green, use it
+                       is.na(priFunc) & is.na(GI_function) ~ "Not Greenspace",   # all NAs mean no greenspace
+                       is.na(priFunc) & !is.na(GI_function) ~ as.character(GI_function) # if not filled from master and open is present, use that
+                    )) %>%
 
          # when buildings (and paths?) have been classified as greenspace, correct this
          dplyr::mutate(GI = ifelse(
@@ -285,7 +292,7 @@ opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
 
 
 
-# SAVE UPDATED MASTERMAP ----------------------------------------------------------------------
+   # SAVE UPDATED MASTERMAP ----------------------------------------------------------------------
 
 
    saveRDS(mm, file.path(output_temp,  paste0(title,"_MM_02.RDS")))
@@ -310,7 +317,7 @@ opgreen_r <- makeTiles(vectlist = opengreen, value = "op_function",
 
    return({
       invisible({
-      mm <<- mm
+         mm <<- mm
       })
 
    })
