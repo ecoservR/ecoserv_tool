@@ -80,6 +80,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    ### Step 1. Create a buffer around the studyArea -----
 
    studyAreaBuffer <- sf::st_buffer(studyArea, studybuffer) %>% # create a buffer around the study area shape
+      sf::st_union() %>%  # dissolve so that overlapping parts do not generate overlapping polygons in other datasets
       sf::st_make_valid() %>% # make sure outline is valid
       sf::st_geometry() %>% sf::st_as_sf()  # retain only geometry
 
