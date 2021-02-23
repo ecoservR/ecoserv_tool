@@ -149,7 +149,11 @@ add_greenspace <- function(mm = parent.frame()$mm,
          message("Finished updating with OS Greenspace")
          rm(i)
 
-      } else {message("No Greenspace features within your study area.")}
+      } else {
+         message("No Greenspace features within your study area.")
+         # add a priFunc column anyway (with NA values)
+         mm <- lapply(mm, function(x) mutate(x, priFunc = NA))
+         }
 
    } else {
       mm <- lapply(mm, function(x) dplyr::mutate(x, priFunc = NA))  # if not using Greenspace, create empty columns so classification rules still apply
