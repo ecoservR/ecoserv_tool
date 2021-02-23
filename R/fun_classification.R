@@ -437,9 +437,6 @@ classif_phi <- function(x){
       grepl("heath", phi) & !grepl("Mountain heaths", phi) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "Du",  # not sure if should include fragmented heath
       grepl("heath", phi) & !grepl("Mountain heaths", phi) & HabCode_B %in% c("D/E", "D_B5/E3/F/H2") ~ "Du",
 
-      phi == "No main habitat but additional habitats present" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "D5/D6",
-      phi == "No main habitat but additional habitats present" & HabCode_B %in% c("D/E", "D_B5/E3/F/H2") ~ "D5/D6",
-
       phi == "Upland flushes, fens and swamps" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "E2/E3/F1",
       phi == "Upland flushes, fens and swamps" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "E2/E3/F1",
 
