@@ -112,6 +112,26 @@ if ("phi" %in% attributes){
    }
 
 
+# Further decide on agricultural land based on size
+   mm <- lapply(mm, function(x) classif_area(x, params))
+
+
+   # further decisions based on elevation and slope
+   if ("elev" %in% attributes){
+      mm <- lapply(mm, function(x) classif_elev(x, params))
+   }
+
+   ## Get rid of the B4/Bu intermediary code as there is no match for it in models
+   ## TO DO add decisions to split, but now all to B4
+
+   mm <- lapply(mm, function(x) mutate(x,
+                                       HabCode_B = case_when(
+      HabCode_B == "B4/Bu" ~ "B4",
+      TRUE ~ HabCode_B))
+   )
+
+
+
 
 
 # Finish and save ---------------------------------------------------------

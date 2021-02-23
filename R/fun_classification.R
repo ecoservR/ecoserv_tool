@@ -362,7 +362,9 @@ classif_mastermap <- function(x, params){
 
             grepl("Heath", Term) &
                grepl("Rough Grassland", Term) &
-               (grepl("Trees", Term) | grepl("Scrub", Term)) ~ "D5/Bu/Au"
+               (grepl("Trees", Term) | grepl("Scrub", Term)) ~ "D5/Bu/Au",
+
+            Group == "Unclassified" & Theme == "Land" ~ "B"
          ),
          HabCode_B
       )
@@ -406,7 +408,7 @@ classif_phi <- function(x){
 
       ## Montane habitats
       phi == "Mountain heaths and willow scrub" &
-         (grepl("A", HabCode_B) | grepl("B4/J11", HabCode_B) | grepl("D", HabCode_B)) ~ "A2m",
+         (grepl("A", HabCode_B) | grepl("B", HabCode_B) | grepl("D", HabCode_B)) ~ "A2m",
 
 
       ## Moorland (no trees)
@@ -553,7 +555,7 @@ classif_green <- function(x){
 
   x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
 
-      GI == "Allotments Or Community Growing Spaces" & HabCode_B == "B4/J11" ~ "J11t",
+      GI == "Allotments Or Community Growing Spaces" & grepl("B", HabCode_B) ~ "J11t",
 
       # TO DO: Coastal does not seem to exist in MM Greenspace, so look for amenity with MM group foreshore?
 
@@ -623,8 +625,9 @@ classif_agri <- function(x){
                             HabCode_B == "B4/J11" & grepl("arable_land", corine) &
                                !(crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land"))  ~ "J11",
 
-                            # if a polygon was unclassified and crome is vegetated
-                            Group == "Unclassified" & !crome %in% c("Non-vegetated or sparsely-vegetated Land") ~ "B4/J11",
+                            # if a polygon was unclassified and crome is vegetated or corine is pastures
+                            Group == "Unclassified" &
+                              (corine == "Pastures" | !crome %in% c("Non-vegetated or sparsely-vegetated Land")) ~ "B4/J11",
 
                             TRUE ~ HabCode_B
                          ))
@@ -644,6 +647,7 @@ classif_agri <- function(x){
 
                             # unclassified things
                             Group == "Unclassified" & grepl("arable_land", corine)  ~ "J11",
+                            Group == "Unclassified" & grepl("Pastures", corine)  ~ "B4/Bu",
 
                             TRUE ~ HabCode_B
                          ))
@@ -669,4 +673,76 @@ classif_agri <- function(x){
    }
 }
 
+
+# Classification of agri land based on size ------------------------------------
+
+#' Classify Habitats Using Size Criteria
+#'
+#' Revises habitat classification of agricultural land using the parameters set with the project. Not meant to be called directly; rather is used conditionally in classify_habitats().
+
+#' @param x A basemap sf object
+#' @return The basemap sf object with updated attribute HabCode_B
+#' @export
+
+
+classif_area <- function(x, params){
+   x <- x %>% dplyr::mutate(
+      HabCode_B = dplyr::case_when(
+
+         # pastures
+         HabCode_B %in% c("B4/J11") & shp_area < params$arable_min ~ "B4/Bu",
+
+         # arable land
+         HabCode_B == "B4/J11" & shp_area > params$improved_max ~ "J11",
+
+         TRUE ~ HabCode_B
+      ))
+}
+
+
+
+# Classification based on elevation ---------------------------------------
+
+#' Classify Habitats Using Elevation
+#'
+#' Revises habitat classification of agricultural land and upland habitats using the parameters set with the project. Not meant to be called directly; rather is used conditionally in classify_habitats().
+
+#' @param x A basemap sf object with the "elev" and "slope" attributes
+#' @return The basemap sf object with updated attribute HabCode_B
+#' @export
+
+classif_elev <- function(x, params){
+
+   x <- x %>% dplyr::mutate(
+      HabCode_B = dplyr::case_when(
+
+         ## Grasslands on steep slopes are more likely to be unimproved
+         HabCode_B %in% c("B4/J11", "B4/Bu", "Bu1/Bu2", "Bu", "Bu2", "B4", "J11") &
+            slope > params$slope_unimp ~ "Bu1",
+
+         ## Grasslands on moderate slopes are unknown, probably semi-improved
+         HabCode_B %in% c("B4/J11", "B4/Bu", "Bu1/Bu2", "Bu", "Bu2", "B4", "B4f", "J11") &
+            between(slope, params$slope_semi, params$slope_unimp) ~ "Bu",
+
+         ## Heather on steep slopes must be dry
+         HabCode_B %in% c("D5_B5/E3/F/H2", "E2/E3/F1") &
+            slope > params$slope_dry ~ "Du",
+
+         TRUE ~ HabCode_B)) %>%
+
+      dplyr::mutate(HabCode_B = dplyr::case_when(
+
+         ## Things at high elevations are montane habitats
+
+         grepl("A", HabCode_B) & elev > params$montane ~ "A2m",  # mountane scrub
+         grepl("D", HabCode_B) & elev > params$montane ~ "D4",   # mountane heath / shrub
+
+         ## Above a certain elevation (boundary between upland and lowland), we assume there are no crops and most grasslands would be semi-improved (rough grazing)
+
+         HabCode_B %in% c("J11", "B4/J11", "B4/Bu", "B4") & elev > params$upland ~ "Bu2",
+
+         TRUE ~ HabCode_B
+      )
+      )
+}
 
