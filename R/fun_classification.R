@@ -129,7 +129,10 @@ classif_mastermap <- function(x, params){
 
          Term %in% c(
             permute("Nonconiferous Trees", "Scrub"),
+            permute("Nonconiferous Trees", "Scrub", "Coppice Or Osiers"),
             permute("Coppice Or Osiers", "Nonconiferous Trees"),
+            permute("Nonconiferous Trees", "Boulders (Scattered)", "Coppice Or Osiers"),
+            permute("Nonconiferous Trees", "Rock (Scattered)", "Coppice Or Osiers"),
             permute("Boulders (Scattered)","Nonconiferous Trees","Scrub"),
             permute("Rock (Scattered)","Nonconiferous Trees","Scrub"),
             permute("Boulders (Scattered)","Rock (Scattered)", "Nonconiferous Trees","Scrub")) ~ "A11/A2", # forest with scrub
@@ -719,7 +722,7 @@ classif_elev <- function(x, params){
 
          ## Grasslands on moderate slopes are unknown, probably semi-improved
          HabCode_B %in% c("B4/J11", "B4/Bu", "Bu1/Bu2", "Bu", "Bu2", "B4", "B4f", "J11") &
-            between(slope, params$slope_semi, params$slope_unimp) ~ "Bu",
+            dplyr::between(slope, params$slope_semi, params$slope_unimp) ~ "Bu",
 
          ## Heather on steep slopes must be dry
          HabCode_B %in% c("D5_B5/E3/F/H2", "E2/E3/F1") &
@@ -742,4 +745,40 @@ classif_elev <- function(x, params){
       )
       )
 }
+
+
+
+
+# Classify GI access ------------------------------------------------------
+
+#' Classify Accessibility of Greenspaces
+#'
+#' Adds a GIpublic attribute indicating whether a greenspace is public, private or has restricted access (only accessible at certain times or to certain groups of people e.g. through membership). Not meant to be called directly; is called in classify_habitats().
+
+#' @param x A basemap sf object with the GI attribute
+#' @return The basemap sf object with new attribute GIpublic
+#' @export
+
+classif_access <- function(x){
+
+x <- dplyr::mutate(x,
+          GIpublic = dplyr::case_when(
+             GI %in% c("Amenity", "Undetermined Greenspace") &
+                Term == "Agricultural Land" ~ "Private",  # sometimes amenity category assigned to fields, which are probably not public
+
+             GI == "Private Garden" ~ "Private",
+
+             GI == "Land Use Changing" ~ "Private",   # probable construction site/area in development
+
+             GI %in% c("Amenity", "Public Park Or Garden", "Cemetery",
+                       "Play Space", "Religious Grounds") ~ "Public",
+
+             GI %in% c("Camping Or Caravan Park", "Bowling Green",
+                       "Golf Course", "Tennis Court",
+                       "Other Sports Facility", "School Grounds",
+                       "Playing Field", "Institutional Grounds",
+                       "Allotments Or Community Growing Spaces") ~ "Restricted"
+          ))
+}
+
 

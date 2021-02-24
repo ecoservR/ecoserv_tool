@@ -74,6 +74,15 @@ classify_map <- function(mm = parent.frame()$mm,
    attributes <- unique(unlist(lapply(mm, function(x) names(x))))
 
 
+   ## Erase previous classification if necessary
+
+   if ("HabCode_B" %in% attributes){
+
+      mm <- lapply(mm, function(x) dplyr::select(x, -HabCode_B))
+   }
+
+
+
 # First round of classification -------------------------------------------
 
 # First we need to make sure there is a GI column (sometimes there is no coverage of OS Greenspace / Open Greenspace for small or rural sites) as it is needed in the classif_mastermap function.
@@ -133,6 +142,12 @@ if ("phi" %in% attributes){
 
 
 
+# GI accessibility classification -----------------------------------------
+
+# Classify GI accessibility with a set of rules
+   mm <- lapply(mm, function(x) classif_access(x))
+
+
 
 # Finish and save ---------------------------------------------------------
 
@@ -143,8 +158,8 @@ if ("phi" %in% attributes){
 
    ## Create a summary to report
 
-   summary <- unlist(lapply(mm, function(x) x %>%
-                               dplyr::select(HabCode_B) %>% st_drop_geometry()
+   summary <- unlist(lapply(mm, function(x) x %>% st_drop_geometry() %>%
+                               dplyr::select(HabCode_B)
                             ))
 
 
