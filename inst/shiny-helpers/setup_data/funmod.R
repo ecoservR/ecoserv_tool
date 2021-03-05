@@ -6,11 +6,11 @@ checkAttrNames <- function(folder, type = "shp", layerstring = NULL, user_names,
 
   # type <- ecoservR::guessFiletype(folder)  # identify file extension
 
-   files <- list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)
+   files <- list.files(folder, pattern = paste0(type, "$"), full.names = TRUE, recursive = TRUE)
 
    # if layer not specified, probably just one (type) and we check the attributes of the first
    if (is.null(layerstring)){
-      layername <- sf::st_layers(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]])[[1]]
+      layername <- sf::st_layers(list.files(folder, pattern = paste0(type, "$"), full.names = TRUE, recursive = TRUE)[[1]])[[1]]
    } else {
       # if we specified a layer we need to identify it
 
@@ -51,7 +51,7 @@ guessFiletype <- function(path){
 
    ## Get list of all (unique) file extensions and subset to accepted formats only
 
-   formats <- c(".shp$", ".gpkg$", ".json$", ".tif", ".asc$")
+   formats <- c(".shp$", ".gpkg$", ".json$", ".tif", ".asc$", ".gz$")
 
    detected <- list.files(path, pattern = paste(formats, collapse = "|"), recursive = TRUE) %>% # all files with ending
       tools::file_ext() %>% unique()  # get unique extensions
