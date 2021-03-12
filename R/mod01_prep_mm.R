@@ -111,6 +111,13 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    for (i in 1:length(mm)){
       mm[[i]] <- dplyr::rename(mm[[i]], !!mm_cols)
+
+
+      ## Check for problematic list-columns and convert them to character if needed
+      mm[[i]] <- mm[[i]] %>%
+         dplyr::mutate(dplyr::across(tidyselect::where(is.list) & !attr(., "sf_column"), ecoservR::list_to_char))
+
+
    }
 
    ### Filter out features we don't need
@@ -126,6 +133,11 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                 # (sometimes prefixed by osgb)
 
    )
+
+
+
+
+
 
    ### Step 3. Crop the MM polygons to the study area -----
    ### And assign to grid reference
@@ -300,7 +312,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    message("Clipping to study area")
    mm <- lapply(mm, function(x) faster_intersect(x, studyAreaBuffer))
-## faster_intersect is 7 minutes
+
 
    ### Step 4. Deal with duplicated polygons at tiles' edges -----
 

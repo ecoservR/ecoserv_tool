@@ -35,3 +35,20 @@ invisible(  # remove folders too
 
 invisible(gc())  # probably not doing much but forces R to return memory to system if available
 }
+
+
+
+#' Turn list-column into character column
+#'
+#' Turns a list into character format: used in EcoservR to fix some MasterMap attributes that import wrongly from certain format (eg GML).
+
+#' @param x A problematic column
+#' @return A vector of character data. Where the original list element was character(0), this is change to NA. Where the original list element had a vector of multiple terms, these are concatenated with a comma.
+#' @export
+#'
+list_to_char <- function(x) {
+   if (inherits(x, "list")){
+      tochar <- sapply(x, function(y) paste0(y, collapse = ","))
+      tochar <- ifelse(tochar == "", NA, tochar)
+   }
+}
