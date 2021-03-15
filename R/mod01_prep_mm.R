@@ -115,7 +115,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
       ## Check for problematic list-columns and convert them to character if needed
       mm[[i]] <- mm[[i]] %>%
-         dplyr::mutate(dplyr::across(tidyselect::where(is.list) & !attr(., "sf_column"), ecoservR::list_to_char))
+         dplyr::mutate(dplyr::across(where(is.list) & !attr(., "sf_column"), ecoservR::list_to_char))
 
 
    }
@@ -327,22 +327,26 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    # Doubtful that MM would have slivers, but can happen if someone has already clipped to their study area
    # Following tidying up steps from the Ecoserv Technical Report and the Word Toolkit User Guide
    message("Checking geometry validity")
-   mm <- lapply(mm,
-                function(x) x %>%
-                   sf::st_make_valid() %>%                # repair geometry if needed
-                   sf::st_cast(to = "MULTIPOLYGON") %>%   # equivalent of multi-part to single part
-                   sf::st_cast(to = "POLYGON", warn = FALSE) %>% # equivalent of multi-part to single part
 
-                   dplyr::mutate(
-                      peri = as.numeric(lwgeom::st_perimeter(.)),   # calculate perimeter (same as Arc LENGTH)
-                      area = as.numeric(sf::st_area(.)),
-                      slvr = (pi * ((peri / (2 * pi)) ^ 2)) / area   # from technical guide
-                   ) %>%
-                   # eliminate slivers
-                   dplyr::filter(!(area < 20 && slvr > 15 && Group != "Path")  # remove narrow things that are not paths
-                   )
+   mm <- checkgeometry(mm, target = "POLYGON")
 
-   )
+
+   # mm <- lapply(mm,
+   #              function(x) x %>%
+   #                 sf::st_make_valid() %>%                # repair geometry if needed
+   #                 sf::st_cast(to = "MULTIPOLYGON") %>%   # equivalent of multi-part to single part
+   #                 sf::st_cast(to = "POLYGON", warn = FALSE) %>% # equivalent of multi-part to single part
+   #
+   #                 dplyr::mutate(
+   #                    peri = as.numeric(lwgeom::st_perimeter(.)),   # calculate perimeter (same as Arc LENGTH)
+   #                    area = as.numeric(sf::st_area(.)),
+   #                    slvr = (pi * ((peri / (2 * pi)) ^ 2)) / area   # from technical guide
+   #                 ) %>%
+   #                 # eliminate slivers
+   #                 dplyr::filter(!(area < 20 && slvr > 15 && Group != "Path")  # remove narrow things that are not paths
+   #                 )
+   #
+   # )
 
 
    ### Step 6. Add a buffer for the sea (not applicable for Dane) -----
