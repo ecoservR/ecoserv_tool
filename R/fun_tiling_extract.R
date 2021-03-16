@@ -73,18 +73,17 @@ prepTiles <- function(mm, vect, studyArea = studyAreaBuffer, value){
 
    vect <- vect[sapply(vect, function(x) nrow(x) > 0)]
 
-   # Cast to single-part polygon (behaves better when rasterizing)
-
-   vect <- lapply(vect, function(x) sf::st_cast(x, to = "MULTIPOLYGON") %>%
-                     sf::st_cast(to = "POLYGON", warn = FALSE))
+   # # Cast to single-part polygon (behaves better when rasterizing)
+   ### Should be taken care of now that checkgeometry is used above
+   #
+   # vect <- lapply(vect, function(x) sf::st_cast(x, to = "MULTIPOLYGON") %>%
+   #                   sf::st_cast(to = "POLYGON", warn = FALSE))
 
    return(vect)
 
    # This function only generate VECTOR tiles. The resulting list of vector tiles can be fed into the makeTile function to create the temporary raster tiles.
 
 }
-
-
 
 
 
