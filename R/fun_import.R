@@ -162,5 +162,54 @@ importDesignatedAreas <- function(path, studyArea, dataset){
 }
 
 
+#' Filtered Import
+#'
+#' Helper function to read only features contained in a study area rather than load every feature in the dataset. Called by loadSpatial() for most baseline dataset imports to reduce memory load and speed up computation.
+
+#' @param x Folder where files are stored
+#' @param y The study area outline to query the data
+#' @param layer Name of the layer, if required
+#' @return A sf dataframe ready to be used by the model. If no features are intersecting the defined boundary, returns a sf dataframe of length 0.
+#' @export
+poly_in_boundary <- function(x, y, layer = NULL){
+
+   if (is.null(layer)){  # for simple datasets with no layer
+
+      # identify CRS of the data to be read
+      mycrs <- rgdal::ogrInfo(x)$wkt
+
+      if (sf::st_crs(y)$wkt != mycrs){
+         y <- sf::st_transform(y, mycrs)  # reproject study area to data's projection
+      }
+
+      query <- y %>%
+         sf::st_union() %>%
+         sf::st_cast(to="MULTIPOLYGON") %>%
+         sf::st_geometry() %>% # convert to sfc
+         sf::st_as_text() # convert to well known text
+
+      mydata <- sf::st_read(x, wkt_filter = query)
+
+   } else {  # when we have a layer name
+
+      # identify CRS of the data to be read
+      mycrs <- rgdal::ogrInfo(x, layer = layer)$wkt
+
+      if (sf::st_crs(y)$wkt != mycrs){
+         y <- sf::st_transform(y, mycrs)  # reproject study area to data's projection
+      }
+
+      query <- y %>%
+         sf::st_union() %>%
+         sf::st_cast(to="MULTIPOLYGON") %>%
+         sf::st_geometry() %>% # convert to sfc
+         sf::st_as_text() # convert to well known text
+
+      mydata <- sf::st_read(x, layer = layer, wkt_filter = query)
+
+   }
+
+   return(mydata)
+}
 
 
