@@ -45,28 +45,26 @@ prepTiles <- function(mm, vect, studyArea = studyAreaBuffer, value){
    }
 
 
-      # Create polygons representing boxes around each mm tile
-      mmex <- lapply(mm, function(x)
-         sf::st_as_sf(as(raster::extent(x), "SpatialPolygons")) %>% sf::st_set_crs(27700))  # list of mm extents
+   # Create polygons representing boxes around each mm tile
+   mmex <- lapply(mm, function(x)
+      sf::st_as_sf(as(raster::extent(x), "SpatialPolygons")) %>% sf::st_set_crs(27700))  # list of mm extents
 
-      names(mmex) <- names(mm)  # assign name to tiles
+   names(mmex) <- names(mm)  # assign name to tiles
 
-      for (i in 1:length(mmex)){
-         mmex[[i]][["OStile"]] <- names(mmex[i])
-      }
+   for (i in 1:length(mmex)){
+      mmex[[i]][["OStile"]] <- names(mmex[i])
+   }
 
-      mmex <- do.call(rbind, mmex) # bind in one object
+   mmex <- do.call(rbind, mmex) # bind in one object
 
 
-      # Cut up the vector file and split the vector tiles into a list
-      vect <- suppressWarnings({
-         sf::st_intersection(vect, mmex) %>%
-            sf::st_make_valid() %>%
-            sf::st_cast(to = "MULTIPOLYGON") %>%
-            sf::st_cast(to = "POLYGON", warn = FALSE)
-      })
+   # Cut up the vector file and split the vector tiles into a list
+   vect <- suppressWarnings({
+      sf::st_intersection(vect, mmex) %>%
+         checkgeometry(., "POLYGON")
+   })
 
-      vect <- split(vect, vect$OStile)
+   vect <- split(vect, vect$OStile)
 
    if (length(vect) == 0) {return(NULL)}
 
@@ -85,6 +83,7 @@ prepTiles <- function(mm, vect, studyArea = studyAreaBuffer, value){
    # This function only generate VECTOR tiles. The resulting list of vector tiles can be fed into the makeTile function to create the temporary raster tiles.
 
 }
+
 
 
 
