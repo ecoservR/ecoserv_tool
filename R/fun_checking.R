@@ -101,10 +101,12 @@ checkgeometry <- function(x, target = "POLYGON"){
       x <- lapply(x,
                   function(y){
                      if (sf::st_geometry_type(y, by_geometry = FALSE) == target){
-                        return(sf::st_make_valid(y))  # if tile already has the right geometry, do nothing
-                     } else {  # otherwise validate geometry and cast to target (multi to single part)
+                        return(sf::st_make_valid(y))  # if tile already has the right geometry, do nothing but validate
+                     } else {  # otherwise fix geometry and cast to target (multi to single part)
                         y <- sf::st_make_valid(y) %>%
-                           # remove geometries that are valid but incorrect type (e.g line and points from polygon clipping)
+                           # remove geometries that are valid but incorrect type
+                           # (e.g line and points from polygon clipping)
+      # Note: this WILL lead to small holes in some places
                            dplyr::filter(sf::st_is(., if(target == "POLYGON"){
                               c("POLYGON","MULTIPOLYGON")} else {c("POINT","MULTIPOINT")})) %>%
                            sf::st_cast(to = ifelse(target == "POLYGON", "MULTIPOLYGON", "MULTIPOINT")) %>%
@@ -137,6 +139,7 @@ checkgeometry <- function(x, target = "POLYGON"){
 #' @param ID Attribute containing a polygon's unique identifier
 #' @return The same list with duplicates removed
 #' @export
+#'
 removeDuplicPoly <- function(list, ID){
    # list is the list of tiles (in sf format)
    # ID is the identification field (column name)
@@ -145,17 +148,27 @@ removeDuplicPoly <- function(list, ID){
 
    if (length(list) > 1){ # method for basemap tiles
 
-      IDlist <- vector()  # create empty list to start
+      # create empty list to start (pre-allocate memory)
+      IDlist <- vector(mode = "character",
+                       length=sum(unlist(lapply(list, function(x) nrow(x)))))
+      IDlist <- rep(NA_character_, length(IDlist))
 
       for (i in 1:(length(list)-1)) { # for each list element apart from the last
 
          # get list of unique IDs
-         addtolist <- list[[i]][, ID] %>% sf::st_drop_geometry()
+         addtolist <- as.character(list[[i]][[ID]])
          # (with base subsetting, we can call directly ID and it will be evaluated to whatever column name the user specified)
 
-         IDlist <- rbind(IDlist, addtolist) # append the new unique values to the comparison vector
+         if (i > 1){  # change in place rather than append to a list for better memory management
+            lowindex <- min(which(is.na(IDlist)))
+            maxindex <- lowindex + length(addtolist) - 1
+            IDlist[lowindex:maxindex] <- addtolist
 
-         list[[i + 1]] <- list[[i + 1]][!(as.character(list[[i + 1]][[ID]]) %in% as.character(IDlist[ ,1])), ] # the following list element gets filtered out of any value that already appears in the list of polygon IDs
+         } else {  # the first iteration is simpler
+            IDlist[1:length(addtolist)] <- addtolist
+         }
+
+         list[[i + 1]] <- list[[i + 1]][!(as.character(list[[i + 1]][[ID]]) %in% as.character(IDlist)), ] # the next list element gets filtered out of any value that already appears in the list of polygon IDs
 
 
       }
