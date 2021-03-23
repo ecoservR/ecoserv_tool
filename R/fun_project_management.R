@@ -55,9 +55,10 @@ updateProjectLog <- function(projlog){
    if (length(files) > 1){
       times <- file.info(files)$mtime
       files <- files[which.max(times)]
-   }
-
-   if (length(files) == 0) stop("Could not find project log in your project folder.")
+   } else if (length(files) == 0) {
+      message("Warning: you are creating a project log manually.")
+      files <- paste0(projlog$title, "_projectLog.RDS")
+      }
 
    saveRDS(projlog, file.path(projlog$log_path, basename(files)))
 }
