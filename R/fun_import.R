@@ -54,7 +54,7 @@ guessFiletype <- function(path){
 #' @return A list of spatial files
 #' @export
 
-loadSpatialNew <- function(folder, layer = NULL, filetype, querylayer = NULL){
+loadSpatial <- function(folder, layer = NULL, filetype, querylayer = NULL){
    # folder is the folder where the files are stored
    # layer is the layer name, without extension (e.g. topographicLine, topographicArea...)
    # filetype is the format, currently supporting gpkg, shp
