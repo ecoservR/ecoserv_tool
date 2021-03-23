@@ -77,8 +77,8 @@ capacity_water_purif <- function(x, studyArea, DTM = NULL, spr = NULL,
    ## Now no matter what, the object dtm should be a valid directory
    ## Does it contain a raster?
 
-   if (length(list.files(path = dtm, pattern = "tif")) == 0 &&  # any tif?
-      length(list.files(path = dtm, pattern = "asc")) == 0      # or any asc?
+   if (length(list.files(path = dtm, pattern = "tif", recursive = TRUE)) == 0 &&  # any tif?
+      length(list.files(path = dtm, pattern = "asc", recursive = TRUE)) == 0      # or any asc?
    ){
       stop("Cannot find elevation rasters at file path: ", dtm)
    }
