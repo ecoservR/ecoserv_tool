@@ -135,29 +135,33 @@ checkgeometry <- function(x, target = "POLYGON"){
 #'
 #' This function loops through a list of tiles and removes polygons that are duplicated across tiles. If only one tile is used, the distinct function.
 
-#' @param list List of simple features spatial objects, usually OS MasterMap tiles
+#' @param tiles List of simple features spatial objects, usually OS MasterMap tiles
 #' @param ID Attribute containing a polygon's unique identifier
 #' @return The same list with duplicates removed
 #' @export
 #'
-removeDuplicPoly <- function(list, ID){
-   # list is the list of tiles (in sf format)
+removeDuplicPoly <- function(tiles, ID){
+   # tiles is the list of tiles (in sf format)
    # ID is the identification field (column name)
 
-   if (!inherits(list, "list")) stop("Basemap must be provided in list form")
+   if (!inherits(tiles, "list")) stop("Basemap must be provided in list form")
 
-   if (length(list) > 1){ # method for basemap tiles
+   if (length(tiles) > 1){ # method for basemap tiles
 
       # create empty list to start (pre-allocate memory)
       IDlist <- vector(mode = "character",
-                       length=sum(unlist(lapply(list, function(x) nrow(x)))))
+                       length=sum(unlist(lapply(tiles, function(x) nrow(x)))))
       IDlist <- rep(NA_character_, length(IDlist))
 
-      for (i in 1:(length(list)-1)) { # for each list element apart from the last
+      for (i in 1:(length(tiles)-1)) { # for each list element apart from the last
+
+         tiles[[i]] <- tiles[[i]][!duplicated(tiles[[i]][[ID]]), ] # remove duplicates from within the tile itself
 
          # get list of unique IDs
-         addtolist <- as.character(list[[i]][[ID]])
+         addtolist <- as.character(tiles[[i]][[ID]])
          # (with base subsetting, we can call directly ID and it will be evaluated to whatever column name the user specified)
+
+         if(length(addtolist) == 0){next} # move to next tile if nothing in this one
 
          if (i > 1){  # change in place rather than append to a list for better memory management
             lowindex <- min(which(is.na(IDlist)))
@@ -168,21 +172,20 @@ removeDuplicPoly <- function(list, ID){
             IDlist[1:length(addtolist)] <- addtolist
          }
 
-         list[[i + 1]] <- list[[i + 1]][!(as.character(list[[i + 1]][[ID]]) %in% as.character(IDlist)), ] # the next list element gets filtered out of any value that already appears in the list of polygon IDs
+         tiles[[i + 1]] <- tiles[[i + 1]][!(as.character(tiles[[i + 1]][[ID]]) %in% IDlist), ] # the next list element gets filtered out of any value that already appears in the list of polygon IDs
 
 
       }
 
       rm(IDlist, addtolist)
 
-   } else if (length(list) == 1){   # method for only one map tile
-      list[[1]] <- list[[1]][!duplicated(list[[1]][[ID]]), ]  # remove any duplicated IDs
+   } else if (length(tiles) == 1){   # method for only one map tile
+      tiles[[1]] <- tiles[[1]][!duplicated(tiles[[1]][[ID]]), ]  # remove any duplicated IDs
    }
 
-   return(list)
+   return(tiles)
 
 } # end of function
-
 
 
 
