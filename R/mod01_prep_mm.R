@@ -39,6 +39,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
       dir.create(output_temp)
    }
 
+### Step 1. Import and buffer the studyArea -----
 
    ### Import the study area outline (specifying OSGB as crs)
 
@@ -54,30 +55,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
          sf::st_set_crs(., 27700)  # set the crs manually to get rid of GDAL errors with init string format
    })
 
-
-
-### Import the OS Master Map
-
-   # NOTE: Most users will have done a data download that has many files, one for each 10km tile.
-   # All the files should be in the same folder for the function to work (the name of the folder is the first argument of the function).
-   # The loadSpatial function creates a list of all the TopographicArea layers available in the folder. It is this list-object that gets updated sequentially during the next steps.
-
-   message("Preparing to load Master Map")
-   mm <- try(loadSpatial(folder = mmpath,
-                         layer = mmlayer,
-                         filetype = guessFiletype(mmpath)))
-
-   if (inherits(mm, "try-error")) stop("Could not import OS Mastermap. Check file path and format.")
-
-   message("Master Map imported.")
-
-   ## Check and set crs
-
-   mm <- checkcrs(mm, 27700)
-
-   # DATA PREP -----------------------------------------------------------------------------------
-
-   ### Step 1. Create a buffer around the studyArea -----
+   ### Buffer and union
 
    studyAreaBuffer <- sf::st_buffer(studyArea, studybuffer) %>% # create a buffer around the study area shape
       sf::st_union() %>%  # dissolve so that overlapping parts do not generate overlapping polygons in other datasets
@@ -88,11 +66,10 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    # Save the buffer to disk for next scripts
 
-   # Save the buffer as a geopackage
    sf::st_write(studyAreaBuffer,
-            dsn = file.path(output_temp,
-                            paste(title, "_studyAreaBuffer_",studybuffer,"m.gpkg", sep="")),
-            append = FALSE # will overwrite existing object if present
+                dsn = file.path(output_temp,
+                                paste(title, "_studyAreaBuffer_",studybuffer,"m.gpkg", sep="")),
+                append = FALSE # will overwrite existing object if present
    )
 
 
@@ -102,53 +79,71 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    if(sf::st_is_valid(studyAreaBuffer)) {message("Study area buffered and saved to your output folder.")}
 
 
+   ### Step 2. Import and tidy mastermap data -----
+
+   # NOTE: Most users will have done a data download that has many files, one for each 10km tile.
+   # All the files should be in the same folder for the function to work (the name of the folder is the first argument of the function).
+   # The loadSpatial function creates a list of all the spatial objects (matching a certain layer) in the folder. It is this list-object that gets updated sequentially during the next steps.
+   # As of March 2021 the loadSpatial function takes a querylayer argument to only import features actually intersecting with the study area.
+
+   message("Preparing to load Master Map")
+
+   mm <- try(loadSpatial(folder = mmpath,
+                         layer = mmlayer,
+                         filetype = guessFiletype(mmpath),
+                         querylayer = studyAreaBuffer))
+
+   if (inherits(mm, "try-error")) stop("Could not import OS Mastermap. Check file path and format.")
+
+   message("Master Map imported.")
+
+   ## Check and set crs (now done in loadSpatial)
+   #mm <- checkcrs(mm, 27700)
+
+
+   # DATA PREP -----------------------------------------------------------------------------------
 
    message("Tidying up the master map")
-
-   ### Step 2. Tidy the MM to keep only needed fields -----
 
    ### Rename columns in case they were not the OS default
 
    for (i in 1:length(mm)){
       mm[[i]] <- dplyr::rename(mm[[i]], !!mm_cols)
 
-
-      ## Check for problematic list-columns and convert them to character if needed
+      ## Check for problematic list-columns (preserving the list format for geometry!!)
+      ## and convert them to character if needed
       mm[[i]] <- mm[[i]] %>%
          dplyr::mutate(dplyr::across(where(is.list) & !attr(., "sf_column"), ecoservR::list_to_char))
 
-
    }
+
+   message("Removing duplicated polygons")
+   mm <- removeDuplicPoly(mm, ID = "TOID")    # fast enough
 
    ### Filter out features we don't need
    mm <- lapply(mm,
                 function(x)
                    dplyr::filter(x,
                                  PhysicalLevel != "51",  # remove things above ground level
-                                 Group != "Landform"  # remove any group with landform in description
+                                 Group != "Landform"     # remove any group with landform in description
                    ) %>%
-                   dplyr::select(names(mm_cols)) %>%
-                   dplyr::mutate(TOID = gsub("[a-zA-Z ]", "", TOID))
+                   dplyr::select(names(mm_cols)) %>%     # keep only attributes of interest
+                   dplyr::mutate(TOID = as.character(gsub("[a-zA-Z ]", "", TOID)))
                 # Change TOID to numeric characters only
                 # (sometimes prefixed by osgb)
 
    )
 
 
+   ### Step 3. Assign grid reference to polygons -----
 
-
-
-
-   ### Step 3. Crop the MM polygons to the study area -----
-   ### And assign to grid reference
-
-   ## We use the OS 10km grid tiles to chop up a large basemap or reshuffle existing tiles slightly. This results in a list of tiles where each is named according to its 10km grid ref.
+   ## We use the OS 10km grid tiles to chop up a large basemap or to
+   ## reshuffle existing tiles slightly. This results in a list of tiles
+   ## where each is named according to its 10km grid ref.
 
    # Grid is a dataset built into the package and should be present without having to be called
 
-   # grid <- st_read("builtin/OSgrid10km", layer = "grid10km")  # the 10km national grid in the builtin/ folder
    grid <- suppressMessages(checkcrs(grid, studyAreaBuffer))  # reproject if needed
-
 
    # Set crs for list elements so they match buffer (OSGB36) -they should already but just in case
 
@@ -179,7 +174,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    if (length(mm) == 1){  # if we have one big mastermap
       message("Tiling mastermap")
 
-      mm <- do.call(rbind, mm)
+      mm <- mm[[1]]
 
       ## Find out which grid references polygons belong to
       index <- sf::st_intersects(sf::st_geometry(grid), sf::st_geometry(mm))  # create index
@@ -309,9 +304,10 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    rm(index, grid)
 
    ### Clip to studyAreaBuffer
+   ### that should now be done within the loadSpatial function
 
-   message("Clipping to study area")
-   mm <- lapply(mm, function(x) faster_intersect(x, studyAreaBuffer))
+   #message("Clipping to study area")
+   #mm <- lapply(mm, function(x) faster_intersect(x, studyAreaBuffer))
 
 
    ### Step 4. Deal with duplicated polygons at tiles' edges -----
@@ -320,7 +316,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    ## This step should be done before converting multipart to singlepart, because TOIDs will be duplicated (rightly) when a multipart polygon is split in two
 
-   mm <- removeDuplicPoly(mm, ID = "TOID")    # fast enough
+  # mm <- removeDuplicPoly(mm, ID = "TOID")    # fast enough
 
    ### Step 5. Tidy up the geometries and calculate new fields -----
 
@@ -331,25 +327,8 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    mm <- checkgeometry(mm, target = "POLYGON")
 
 
-   # mm <- lapply(mm,
-   #              function(x) x %>%
-   #                 sf::st_make_valid() %>%                # repair geometry if needed
-   #                 sf::st_cast(to = "MULTIPOLYGON") %>%   # equivalent of multi-part to single part
-   #                 sf::st_cast(to = "POLYGON", warn = FALSE) %>% # equivalent of multi-part to single part
-   #
-   #                 dplyr::mutate(
-   #                    peri = as.numeric(lwgeom::st_perimeter(.)),   # calculate perimeter (same as Arc LENGTH)
-   #                    area = as.numeric(sf::st_area(.)),
-   #                    slvr = (pi * ((peri / (2 * pi)) ^ 2)) / area   # from technical guide
-   #                 ) %>%
-   #                 # eliminate slivers
-   #                 dplyr::filter(!(area < 20 && slvr > 15 && Group != "Path")  # remove narrow things that are not paths
-   #                 )
-   #
-   # )
 
-
-   ### Step 6. Add a buffer for the sea (not applicable for Dane) -----
+   ### Step 6. Add a buffer for the sea -----
 
    ## Import coastline boundaries
    ## anything outside the UK boundary is labelled as sea and a buffer added...
