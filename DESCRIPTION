@@ -21,6 +21,7 @@ Imports:
     dplyr (>= 1.0.1),
     sf (>= 0.9.3),
     rgdal(>= 1.5.16),
+    rgeos (>= 0.4.2),
     lwgeom (>= 0.2.4),
     raster (>= 3.3.10),
     fasterize (>= 1.0.1),
