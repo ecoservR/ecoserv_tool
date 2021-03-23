@@ -5,6 +5,7 @@ Version: 0.1.0
 Authors@R: c(
     person("Sandra", "Angers-Blondin", email = "s.angers-blondin@ljmu.ac.uk", role = c("aut","cre")),
     person("Karl", "Buskdieker", role = "aut"),
+    person("Hanna", "Partoft", role = "aut"),
     person("Chloe", "Bellamy", role = "aut"),
     person("Jim", "Rouquette", role = "aut"),
     person("Alison", "Holt", role = "aut"),
