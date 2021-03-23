@@ -45,24 +45,30 @@ guessFiletype <- function(path){
 #' Load Spatial Data
 #'
 #' This function looks into a folder for a specified file type and loads all corresponding files into a list.
+#' It has the option of adding a query layer to only read in memory the features that intersect an area of interest.
 
 #' @param folder Folder where spatial file or files are stored
 #' @param layer Layer name if several layers present in folder
 #' @param filetype File format. Accepted file extensions are "gpkg", "shp", "json", "gz", "gml", "tab".
+#' @param querylayer A sf vector layer to use as a spatial query to only load intersecting features. Speeds up data import; default NULL for no spatial query.
 #' @return A list of spatial files
 #' @export
 
-loadSpatial <- function(folder, layer = NULL, filetype){
+loadSpatialNew <- function(folder, layer = NULL, filetype, querylayer = NULL){
    # folder is the folder where the files are stored
    # layer is the layer name, without extension (e.g. topographicLine, topographicArea...)
    # filetype is the format, currently supporting gpkg, shp
+   # querylayer is typically the study area, to only import relevant features
 
    ## List all acceptable spatial files in folder
    fileList <- list.files(folder, pattern = paste0(filetype, collapse="|"),
                           recursive = TRUE, full.names = TRUE,
                           ignore.case = TRUE)
 
-   ## Handling for shapefiles is different than for the rest as layers need to be specified (if specifying folder only, just the first shp will be read)
+
+
+   ## Handling for shapefiles is different than for the rest as layers need to be specified
+   ## (if specifying folder only, just the first shp will be read)
 
    if(grepl("shp", filetype)){
 
@@ -79,28 +85,49 @@ loadSpatial <- function(folder, layer = NULL, filetype){
          sub(pattern = filetype,
              replacement = "\\1", basename(x), ignore.case = TRUE))  # remove extension from file name
 
+      if (is.null(querylayer)){
+
+         # for each file in the list, read the selected layer into a new list and return it
+         imported <- mapply(function(x, y) sf::st_read(dsn = x, layer = y),
+                            x=dsn_paths,
+                            y=fileList,
+                            SIMPLIFY = FALSE)   # very important otherwise removes class sf
 
 
-      # for each file in the list, read the selected layer into a new list and return it
-      imported <- mapply(function(x, y) sf::st_read(dsn = x, layer = y),
-                         dsn_paths,
-                         fileList,
-                         SIMPLIFY = FALSE)   # very important otherwise removes class sf
+      } else {
+
+         # for each file in the list, read the selected layer into a new list,
+         # using the study area as a spatial query, clipping and tidying up as we go
+
+         imported <- mapply(function(x, y){
+
+            suppressWarnings({
+               item <- poly_in_boundary(x, querylayer, layer = y)
+
+               if (nrow(item) > 0){
+                  item <- ecoservR::checkcrs(item, querylayer) %>%
+                     ecoservR::checkgeometry(., "POLYGON") %>%
+                     sf::st_intersection(sf::st_geometry(querylayer)) %>%
+                     ecoservR::checkgeometry(., "POLYGON")
+               }
+            })
+         },
+         x=dsn_paths,
+         y=fileList,
+         SIMPLIFY = FALSE)   # very important otherwise removes class sf
+
+      }
 
       return(imported)
       rm(fileList, dsn_paths)
 
-   } else {
+   } else {  # END OF WORKFLOW FOR SHAPEFILES
 
       ## For geopackages and other single files, we only want to specify the layer name if we know the dataset is likely to come in a bundle of layers; otherwise we read the first (and probably only) layer
 
-      # # Create list of geopackage files in the specified folder
-      # fileList <- list.files(folder, pattern = filetype,
-      #                        all.files=TRUE, recursive = TRUE, ignore.case = TRUE,
-      #                        full.names=TRUE)  # full name FALSE means that we get the file name only
-
       if (is.null(layer)) { # if no layer specified, will load the first layer available
 
+         # warning message
          if (length(unique(sf::st_layers(fileList[[1]])$name)) > 1) message(paste0(
             "Multiple layers found in '",
             fileList[[1]],
@@ -108,13 +135,64 @@ loadSpatial <- function(folder, layer = NULL, filetype){
             sf::st_layers(fileList[[1]])$name[[1]],
             "'."))
 
-         imported <- lapply(fileList, function(x) sf::st_read(dsn = x))
-      } else {
+         # import features with or without a spatial query
+
+         if (is.null(querylayer)){
+
+            imported <- lapply(fileList, function(x) sf::st_read(dsn = x))
+
+         } else {
+            imported <- lapply(fileList, function(x) {
+               suppressWarnings({
+                  item <- poly_in_boundary(x, querylayer)
+
+                  if (nrow(item) > 0){
+                     item <- ecoservR::checkcrs(item, querylayer) %>%
+                        ecoservR::checkgeometry(., "POLYGON") %>%
+                        sf::st_intersection(sf::st_geometry(querylayer)) %>%
+                        ecoservR::checkgeometry(., "POLYGON")
+                  }
+                  return(item)
+               })
+            })
+         }
+
+      } else {  # workflow for a named layer
 
          # for each file in the list, read the selected layer into a new list and return it
-         imported <- lapply(fileList, function(x) sf::st_read(dsn = x,
-                                                              layer = layer))
+
+
+         # with or without a spatial query
+
+         if (is.null(querylayer)){
+
+            imported <- lapply(fileList, function(x) sf::st_read(dsn = x,
+                                                                 layer = layer))
+
+         } else {
+
+            imported <- lapply(fileList, function(x) {
+               suppressWarnings({
+                  item <- poly_in_boundary(x, querylayer, layer = layer)
+
+                  if (nrow(item) > 0){
+                     item <- ecoservR::checkcrs(item, querylayer) %>%
+                        ecoservR::checkgeometry(., "POLYGON") %>%
+                        sf::st_intersection(sf::st_geometry(querylayer)) %>%
+                        ecoservR::checkgeometry(., "POLYGON")
+                  }
+
+                  return(item)
+               })
+            })
+         }
+
+
       }
+
+      # remove empty list items
+      imported <- imported[sapply(imported, function(x) nrow(x) > 0)]
+
       return(imported)
 
    }
@@ -188,7 +266,7 @@ poly_in_boundary <- function(x, y, layer = NULL){
          sf::st_geometry() %>% # convert to sfc
          sf::st_as_text() # convert to well known text
 
-      mydata <- sf::st_read(x, wkt_filter = query)
+      mydata <- sf::st_read(x, wkt_filter = query, quiet = TRUE)
 
    } else {  # when we have a layer name
 
@@ -205,7 +283,7 @@ poly_in_boundary <- function(x, y, layer = NULL){
          sf::st_geometry() %>% # convert to sfc
          sf::st_as_text() # convert to well known text
 
-      mydata <- sf::st_read(x, layer = layer, wkt_filter = query)
+      mydata <- sf::st_read(x, layer = layer, wkt_filter = query, quiet = TRUE)
 
    }
 
