@@ -15,5 +15,5 @@ checkgeometry(x, target = "POLYGON")
 sf object with desired geometry type.
 }
 \description{
-This function checks the geometry type of a spatial object, and casts to the desired geometry (POLYGON or POINT). Also makes the geometries valid. Used mostly before operations requiring single-part polygon geometry. If intersections return linestrings or points, those are removed.
+This function checks the geometry type of a spatial object, and casts to the desired geometry (POLYGON or POINT). Also makes the geometries valid. Used mostly before operations requiring single-part polygon geometry. If intersections return linestrings, triangles or points, those are dropped.
 }

@@ -4,10 +4,10 @@
 \alias{removeDuplicPoly}
 \title{Remove Duplicated Polygons}
 \usage{
-removeDuplicPoly(list, ID)
+removeDuplicPoly(tiles, ID)
 }
 \arguments{
-\item{list}{List of simple features spatial objects, usually OS MasterMap tiles}
+\item{tiles}{List of simple features spatial objects, usually OS MasterMap tiles}
 
 \item{ID}{Attribute containing a polygon's unique identifier}
 }

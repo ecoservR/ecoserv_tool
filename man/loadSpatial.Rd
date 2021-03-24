@@ -4,7 +4,7 @@
 \alias{loadSpatial}
 \title{Load Spatial Data}
 \usage{
-loadSpatial(folder, layer = NULL, filetype)
+loadSpatial(folder, layer = NULL, filetype, querylayer = NULL)
 }
 \arguments{
 \item{folder}{Folder where spatial file or files are stored}
@@ -12,10 +12,13 @@ loadSpatial(folder, layer = NULL, filetype)
 \item{layer}{Layer name if several layers present in folder}
 
 \item{filetype}{File format. Accepted file extensions are "gpkg", "shp", "json", "gz", "gml", "tab".}
+
+\item{querylayer}{A sf vector layer to use as a spatial query to only load intersecting features. Speeds up data import; default NULL for no spatial query.}
 }
 \value{
 A list of spatial files
 }
 \description{
 This function looks into a folder for a specified file type and loads all corresponding files into a list.
+It has the option of adding a query layer to only read in memory the features that intersect an area of interest.
 }
