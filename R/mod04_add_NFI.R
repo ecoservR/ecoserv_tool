@@ -16,8 +16,8 @@
 #' @export
 
 add_NFI <- function(mm = parent.frame()$mm,
-                       studyAreaBuffer = parent.frame()$studyAreaBuffer,
-                       projectLog = parent.frame()$projectLog){
+                    studyAreaBuffer = parent.frame()$studyAreaBuffer,
+                    projectLog = parent.frame()$projectLog){
 
    timeA <- Sys.time() # start time
 
@@ -41,96 +41,99 @@ add_NFI <- function(mm = parent.frame()$mm,
       nfi_cols <- projectLog$df[projectLog$df$dataset == "nfi", ][["cols"]][[1]]  # attributes
 
 
-# Data import -------------------------------------------------------------
+   ## Data import -------------------------------------------------------------
 
-      nfi <- loadSpatial(folder = nfipath, filetype = nfitype)  # using the loading into list function in case there are many shp
+   # Only load polygons intersecting study area
+      nfi <- loadSpatial(folder = nfipath,
+                         filetype = nfitype,
+                         querylayer = studyAreaBuffer)
 
       nfi <- do.call(rbind, nfi) %>% sf::st_as_sf()  # putting back into one single sf object
 
-# DATA PREP -----------------------------------------------------------------------------------
+   ## DATA PREP -----------------------------------------------------------------------------------
 
-   message("Extracting NFI data...")
+      message("Extracting NFI data...")
 
-# Rename columns if needed
-nfi <- dplyr::rename(nfi, !!nfi_cols)
+      # Rename columns if needed
+      nfi <- dplyr::rename(nfi, !!nfi_cols)
 
-## Check and set projection if needed
+      ## Check and set projection if needed
 
-nfi <- checkcrs(nfi, studyAreaBuffer)
+      nfi <- checkcrs(nfi, studyAreaBuffer)
 
-# Keep only woodlands and tidy up the data
+      # Keep only woodlands and tidy up the data
 
-nfi <- nfi %>%
-   dplyr::filter(CATEGORY == "Woodland") %>%   # keep woodlands
-   sf::st_intersection(studyAreaBuffer) %>%     # crop to study area
-   dplyr::select(woodtype = IFT_IOA) %>%    # remove and rename columns
-   sf::st_make_valid() %>%                      # check and repair geometry
-   sf::st_cast(to = "MULTIPOLYGON") %>%         # multi to single part
-   sf::st_cast(to = "POLYGON", warn = FALSE)
+      nfi <- nfi %>%
+         dplyr::filter(CATEGORY == "Woodland") %>%   # keep woodlands
+         dplyr::select(woodtype = IFT_IOA) %>%
+         checkgeometry(., "POLYGON") # check and repair geometry, multi to single part
 
 
-## Rasterize data (will create tiles if needed)
+      ## Rasterize data (will create tiles if needed)
 
-nfi_v <- prepTiles(mm, nfi, studyArea = studyAreaBuffer, value = "woodtype")
-rm(nfi)
+      nfi_v <- prepTiles(mm, nfi, studyArea = studyAreaBuffer, value = "woodtype")
+      rm(nfi)
 
-if(is.null(nfi_v)){
+      if(is.null(nfi_v)){
 
-   projectLog$ignored <- c(projectLog$ignored, dsname)
-   updateProjectLog(projectLog)
+         projectLog$ignored <- c(projectLog$ignored, dsname)
+         updateProjectLog(projectLog)
 
-   return(message("WARNING: National Forest Inventory data not added: No data coverage for your study area."))
-}
-
-
-nfi_r <- makeTiles(nfi_v, value = "woodtype", name = "NFI")
-rm(nfi_v)
+         return(message("WARNING: National Forest Inventory data not added: No data coverage for your study area."))
+      }
 
 
-# ZONAL STATISTICS TO UPDATE MASTERMAP ----------------------------------------------------------
-
-# Create a key from the rasters' levels to add the descriptions back into the mastermap after extraction
-key <- as.data.frame(raster::levels(nfi_r[[1]]))
+      nfi_r <- makeTiles(nfi_v, value = "woodtype", name = "NFI")
+      rm(nfi_v)
 
 
-mm <- mapply(function(x, n) extractRaster(x, nfi_r, fun = "majority", tile = n, newcol = "nfi"),
-             x = mm,
-             n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
-             SIMPLIFY = FALSE)  # absolutely necessary
+      # ZONAL STATISTICS TO UPDATE MASTERMAP ----------------------------------------------------------
 
-rm(nfi_r)  # remove raster tiles
-
-# Replace the numeric codes by the text description (also a custom function)
-
-mm <- lapply(mm, function(x) addAttributes(x, "nfi", key))
-
-rm(key)
-
-# SAVE UPDATED MASTER MAP ---------------------------------------------------------------------
-
-saveRDS(mm, file.path(output_temp, paste0(title, "_MM_04.RDS")))
-
-# Update the project log with the information that map was updated
-
-projectLog$last_success <- "MM_04.RDS"
-
-updateProjectLog(projectLog) # save revised log
-
-# and delete contents of scratch folder
-cleanUp(scratch_path)
-
-timeB <- Sys.time() # stop time
-
-message(paste0("Finished updating with National Forest Inventory data. Process took ",
-               round(difftime(timeB, timeA, units = "mins"), digits = 1),
-               " minutes."))
+      # Create a key from the rasters' levels to add the descriptions back into the mastermap after extraction
+      key <- as.data.frame(raster::levels(nfi_r[[1]]))
 
 
+      mm <- mapply(function(x, n) extractRaster(x, nfi_r,
+                                                fun = "majority",
+                                                tile = n,
+                                                newcol = "nfi"),
+                   x = mm,
+                   n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
+                   SIMPLIFY = FALSE)  # absolutely necessary
 
-      } else {message("No NFI data input specified.")} # end of running condition
+      rm(nfi_r)  # remove raster tiles
+
+      # Replace the numeric codes by the text description (also a custom function)
+
+      mm <- lapply(mm, function(x) addAttributes(x, "nfi", key))
+
+      rm(key)
+
+      # SAVE UPDATED MASTER MAP ---------------------------------------------------------------------
+
+      saveRDS(mm, file.path(output_temp, paste0(title, "_MM_04.RDS")))
+
+      # Update the project log with the information that map was updated
+
+      projectLog$last_success <- "MM_04.RDS"
+
+      updateProjectLog(projectLog) # save revised log
+
+      # and delete contents of scratch folder
+      cleanUp(scratch_path)
+
+      timeB <- Sys.time() # stop time
+
+      message(paste0("Finished updating with National Forest Inventory data. Process took ",
+                     round(difftime(timeB, timeA, units = "mins"), digits = 1),
+                     " minutes."))
 
 
-# Return mm to environment, whether it has been updated or not.
+
+   } else {message("No NFI data input specified.")} # end of running condition
+
+
+   # Return mm to environment, whether it has been updated or not.
    return({
       invisible({
          mm <<- mm
