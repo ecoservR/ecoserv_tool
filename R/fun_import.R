@@ -33,7 +33,7 @@ guessFiletype <- function(path){
                                        any(grepl(accepted[x], detected, ignore.case = TRUE))
    ))]
 
-   if (length(format) > 1) stop(paste0("Multiple spatial formats found in '", path, "': ", paste0(format, collapse = ", ")))
+   if (length(format) > 1) message(paste0("Warning: Multiple spatial formats found in '", path, "': ", paste0(format, collapse = ", "), ". Import is likely to fail."))
 
    return(format)
 
