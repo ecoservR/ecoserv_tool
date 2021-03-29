@@ -19,6 +19,7 @@ getProjectLog <- function(wd = NULL){
    }
 
    files <- list.files(wd, pattern = "projectlog.RDS",
+                       ignore.case = TRUE,
                        full.names = TRUE)
 
    # If there are many project logs, grab latest
