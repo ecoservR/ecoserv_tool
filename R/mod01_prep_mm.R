@@ -146,7 +146,6 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
 
    ## Extract file extents without reading files in memory
-   message("Detecting geographic extent of Master Map data")
    ex <- ecoservR::getFileExtent(fileList, layer)
 
    # This ex object is a polygon corresponding to the extent of every tile.
@@ -169,8 +168,6 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    # Import mastermap data ---------------------------------------------------
 
-   message("Importing Master Map data")
-
    mm <- vector(mode = "list", length = length(SAgrid))  # initialise empty mm object
    names(mm) <- names(SAgrid)
 
@@ -189,7 +186,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
       # cycle through all files that intersect this grid reference, and import polygons overlapping SA
 
-      mm[[i]] <- lapply(seq_along(nrow(explo[[gridref]])), function(x){
+      mm[[i]] <- lapply(seq_along(c(1:nrow(explo[[gridref]]))), function(x){
 
          poly_in_boundary(explo[[gridref]][["file"]][x],                  # the dsn argument
                           SAgrid[[i]],                                    # the query layer
@@ -242,7 +239,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    # (we only imported the features intersecting the SA but sometimes they are very long, e.g. roads, and stick out of the map)
    mm <- lapply(mm, function(x) suppressWarnings(
-      sf::st_intersection(x, sf::st_geometry(SA))) %>% checkgeometry(., "POLYGON"))
+      sf::st_intersection(x, sf::st_geometry(studyAreaBuffer))) %>% checkgeometry(., "POLYGON"))
 
 
    ### Step 6. Add a buffer for the sea -----
