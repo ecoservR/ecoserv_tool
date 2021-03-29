@@ -295,7 +295,7 @@ capacity_pollination <- function(x, studyArea, res = 5,
    ### Calculate likelihoods -----
    pollin_r <- raster::writeRaster(
       exp(pollin_r*(-0.00104)),
-      filename = file.path(scratch, "pollination_score"),
+      filename = file.path(scratch, "pollination_score2"),
       overwrite = TRUE  # because it's a temporary file we don't mind overwriting it if it exists
    )
 
