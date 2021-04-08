@@ -237,9 +237,32 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    ## Clip to study area
    message("Clipping to study area...")
 
-   # (we only imported the features intersecting the SA but sometimes they are very long, e.g. roads, and stick out of the map)
-   mm <- lapply(mm, function(x) suppressWarnings(
-      sf::st_intersection(x, sf::st_geometry(studyAreaBuffer))) %>% checkgeometry(., "POLYGON"))
+   ## identify core vs edge tiles
+   SAgrid <- ecoservR::grid[
+      lengths(st_intersects(ecoservR::grid, studyAreaBuffer))>0,]
+   is_core <- unlist(sf::st_contains(studyAreaBuffer,SAgrid))
+
+   ## Clip where necessary
+   # (if a whole 10k tile is included within study area, no need)
+
+   for (i in 1:length(mm)){
+
+
+      # we only need to perform clipping on edge tiles
+      if (names(mm)[[i]] %in% names(SAgrid)[is_core]){next}
+
+      ## if we have an edge tile, we apply the faster_intersect custom function
+      ## which deletes polygons outside the boundary, protects those inside
+      ## and clips those on the edge
+
+      mm[[i]] <- faster_intersect(mm[[i]], studyAreaBuffer)
+      message("Clipped tile ", names(mm)[[i]])
+   }
+
+
+   # # (we only imported the features intersecting the SA but sometimes they are very long, e.g. roads, and stick out of the map)
+   # mm <- lapply(mm, function(x) suppressWarnings(
+   #    sf::st_intersection(x, sf::st_geometry(studyAreaBuffer))) %>% checkgeometry(., "POLYGON"))
 
 
    ### Step 6. Add a buffer for the sea -----
