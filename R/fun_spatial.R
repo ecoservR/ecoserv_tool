@@ -33,15 +33,24 @@ faster_intersect <- function(x, cliplayer){
 
       # and we intersect the rest
 
-      x[lengths(test2) == 0,] <- suppressWarnings(
-         sf::st_intersection(x[lengths(test2) == 0,], sf::st_geometry(cliplayer))
-      )
+      cut <- x[lengths(test2) == 0,]  # extract objects to cut
+      x <- x[lengths(test2) != 0,]  # and remove them from main object
+
+      # perform the intersection
+      cut <- suppressWarnings(
+         sf::st_intersection(cut, sf::st_geometry(cliplayer))
+         ) %>%
+         checkgeometry(., "POLYGON")
+
+      x <- rbind(x, cut)
+
 
    }
 
    x <- sf::st_make_valid(x)  # make valid
    return(x)
 }
+
 
 
 #' Functional Threshold
