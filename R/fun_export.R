@@ -233,7 +233,7 @@ preview_basemap <- function(mm = parent.frame()$mm,
 
       x <- mm[index]
       x <- do.call(rbind, x)
-      x <- sf::st_intersection(x, square)
+      x <- suppressWarnings(sf::st_intersection(x, square))
 
 
    } else {
@@ -245,9 +245,9 @@ preview_basemap <- function(mm = parent.frame()$mm,
 
    x <- checkgeometry(x, "POLYGON")
 
-  st_write(x, dsn = file.path(projectLog$projpath, paste0(title,"_basemap_preview.gpkg")))
+  st_write(x, dsn = file.path(projectLog$projpath, paste0(projectLog$title,"_basemap_preview.gpkg")))
 
-   message("Preview exported to ", file.path(projectLog$projpath, paste0(title,"_basemap_preview.gpkg")))
+   message("Preview exported to ", file.path(projectLog$projpath, paste0(projectLog$title,"_basemap_preview.gpkg")))
 
 
    on.exit(invisible(gc())) # garbage collection - return some memory to computer
