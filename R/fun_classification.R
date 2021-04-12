@@ -67,6 +67,9 @@ classif_mastermap <- function(x, params){
          grepl("Mineral Workings", Term) &
             grepl("Rough Grassland", Term) ~ "Bu1",
 
+         grepl("Mineral Workings", Term) &
+            grepl("Scrub", Term) ~ "A2",
+
 
          Term == "Landfill" ~ "I24",
 
@@ -168,6 +171,7 @@ classif_mastermap <- function(x, params){
 
          ## Scrub
          Term == "Scrub" ~ "A2",
+         Term == "Coppice Or Osiers" ~ "A2",
 
          Term %in% c(
             permute("Scrub", "Coppice Or Osiers"),
@@ -232,7 +236,7 @@ classif_mastermap <- function(x, params){
 
 
          ## Rocky stuff -----
-         ## RO DO check Lucy's script for this section
+         ## TO DO check Lucy's script for this section
 
          Term == "Scree" ~ "I12",
 
@@ -298,6 +302,8 @@ classif_mastermap <- function(x, params){
          Term %in% c(
             permute("Heath","Boulders (Scattered)"),
             permute("Heath","Rock (Scattered)"),
+            permute("Heath","Rock"),
+            permute("Heath","Boulders"),
             permute("Heath","Boulders", "Rock"),
             permute("Heath","Boulders (Scattered)", "Rock"),
             permute("Heath","Boulders", "Rock (Scattered)"),
@@ -617,12 +623,12 @@ classif_agri <- function(x){
                          HabCode_B = dplyr::case_when(
 
                             # pastures
-                            HabCode_B == "B4/J11" &
+                            HabCode_B %in% c("B4/J11", "B") &
                                corine == "Pastures" &
                                crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "B4/Bu",
 
                             # crops
-                            HabCode_B == "B4/J11" & grepl("arable_land", corine) &
+                            HabCode_B %in% c("B4/J11", "B") & grepl("arable_land", corine) &
                                !(crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land"))  ~ "J11",
 
                             # if a polygon was unclassified and crome is vegetated or corine is pastures
@@ -640,10 +646,10 @@ classif_agri <- function(x){
                          HabCode_B = dplyr::case_when(
 
                             # pastures
-                            HabCode_B == "B4/J11" & corine == "Pastures" ~ "B4/Bu",
+                            HabCode_B %in% c("B4/J11", "B") & corine == "Pastures" ~ "B4/Bu",
 
                             # crops
-                            HabCode_B == "B4/J11" & grepl("arable_land", corine) ~ "J11",
+                            HabCode_B %in% c("B4/J11", "B") & grepl("arable_land", corine) ~ "J11",
 
                             # unclassified things
                             Group == "Unclassified" & grepl("arable_land", corine)  ~ "J11",
@@ -690,10 +696,10 @@ classif_area <- function(x, params){
       HabCode_B = dplyr::case_when(
 
          # pastures
-         HabCode_B %in% c("B4/J11") & shp_area < params$arable_min ~ "B4/Bu",
+         HabCode_B %in% c("B4/J11", "B") & shp_area < params$arable_min ~ "B4/Bu",
 
          # arable land
-         HabCode_B == "B4/J11" & shp_area > params$improved_max ~ "J11",
+         HabCode_B %in% c("B4/J11", "B") & shp_area > params$improved_max ~ "J11",
 
          TRUE ~ HabCode_B
       ))
@@ -717,11 +723,11 @@ classif_elev <- function(x, params){
       HabCode_B = dplyr::case_when(
 
          ## Grasslands on steep slopes are more likely to be unimproved
-         HabCode_B %in% c("B4/J11", "B4/Bu", "Bu1/Bu2", "Bu", "Bu2", "B4", "J11") &
+         HabCode_B %in% c("B4/J11", "B", "B4/Bu", "Bu1/Bu2", "Bu", "Bu2", "B4", "J11") &
             slope > params$slope_unimp ~ "Bu1",
 
          ## Grasslands on moderate slopes are unknown, probably semi-improved
-         HabCode_B %in% c("B4/J11", "B4/Bu", "Bu1/Bu2", "Bu", "Bu2", "B4", "B4f", "J11") &
+         HabCode_B %in% c("B4/J11", "B", "B4/Bu", "Bu1/Bu2", "Bu", "Bu2", "B4", "B4f", "J11") &
             dplyr::between(slope, params$slope_semi, params$slope_unimp) ~ "Bu",
 
          ## Heather on steep slopes must be dry
@@ -739,7 +745,7 @@ classif_elev <- function(x, params){
 
          ## Above a certain elevation (boundary between upland and lowland), we assume there are no crops and most grasslands would be semi-improved (rough grazing)
 
-         HabCode_B %in% c("J11", "B4/J11", "B4/Bu", "B4") & elev > params$upland ~ "Bu2",
+         HabCode_B %in% c("J11", "B4/J11", "B4/Bu", "B", "B4") & elev > params$upland ~ "Bu2",
 
          TRUE ~ HabCode_B
       )
