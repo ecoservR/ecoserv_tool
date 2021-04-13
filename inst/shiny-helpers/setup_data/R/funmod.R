@@ -39,9 +39,9 @@ if (is.null(layername)) stop("Could not find layer with specified name in this f
 }
 
 
-## REvised filetype funtion to also detect rasters
+## Revised filetype funtion to also detect rasters
 
-guessFiletype <- function(path){
+guessFiletypeShiny <- function(path){
 
    if (!is.na(path) && path != "NA" && !is.null(path)){ # if the path is not NA, we check (otherwise return NA to be filtered out)
 
@@ -59,7 +59,7 @@ guessFiletype <- function(path){
    if (length(detected) == 0) {
       detected <- "error no"} else
          if (length(detected) > 1){
-      detected <- "error multiple"
+      detected <- detected
          }
    }
    } else {
@@ -69,7 +69,7 @@ guessFiletype <- function(path){
 
 }
 
-guessFiletypeV <- Vectorize(guessFiletype, "path", USE.NAMES = FALSE)
+guessFiletypeV <- Vectorize(guessFiletypeShiny , "path", USE.NAMES = FALSE)
 
 
 ## MODULE TO CAPTURE A PATH --------------------
@@ -84,8 +84,10 @@ definePathsUI <- function(id, buttonLabel, winTitle) {
        fluidRow(
           column(4, shinyFiles::shinyDirButton(ns("dirChooseButton"), label = buttonLabel,
                                                title = winTitle,
-                                               buttonType = "default", class = NULL, icon = NULL, style = "margin: 20px 0px")
+                                               buttonType = "default",
+                                               class = NULL, icon = NULL, style = "margin: 20px 0px")
           ),
+
           column(8, shiny::verbatimTextOutput(ns("pathName"),
                                               placeholder = TRUE)  # placeholder to display box even before path is filled in
           )
@@ -94,26 +96,75 @@ definePathsUI <- function(id, buttonLabel, winTitle) {
 }
 
 
-definePaths <- function(input, output, session) {
+definePaths <- function(input, output, session, defaultpath = NULL, set = FALSE) {
+   # defaultpath is the base path to use for faster navigation (ideally project folder)
+   # set: should the default path be set as the output path from the start? If FALSE (default), the path is only
+   # actually set after the user navigates to a folder. If TRUE, the path appears in the text box and is assigned
+   # unless the user changes it by navigating to a different folder
+
    ### Define reactive values for file paths ----
-   path <- shiny::reactiveValues(path = NA)
-   volumes <- shinyFiles::getVolumes()  # recognise drives available locally
+   path <- shiny::reactiveValues(path = NA)# initialise empty reactive value
+
+   volumes <- shinyFiles::getVolumes()      # recognise drives available locally
+
+# if supplying a default path:
+
+   if (!is.null(defaultpath)){
+
+   # due to a bug in shinyfiles we need to create a new "volume" that is the full project path we want to direct the user to
+
+      volumes <- c(volumes(), "Detected Project" = defaultpath)
+      names(volumes) <- c(names(volumes)[1:(length(volumes)-1)], defaultpath)
+
+      if (set == TRUE){
+       path$path <- defaultpath   # show path already only if we're pretty sure it's the one needed
+      }
 
 
-   # Find directory for a set of files
+      # if we have a default path we make shinyFiles go straight to it
+
+      shinyFiles::shinyDirChoose(input, id = "dirChooseButton", root = volumes,
+                                 defaultRoot =  names(volumes)[[length(volumes)]]) # the default "root" is the one we added at the end of volumes()
+
+      ## this was in theory the way to specify the root and the project folder but there is a bug in shiny file
+      #
+      #              defaultRoot = names(volumes())[[agrep(substr(defaultpath, 1, 3), names(volumes()))]], # set default disk to the one contained in default path
+      #              defaultPath = gsub(volumes()[[agrep(substr(defaultpath, 1, 3), names(volumes()))]],
+      #                                 "", dirname(defaultpath))
+      # )
+
+
+
+      # When clicking the browse button user can choose a different folder: save the path as a reactive
+      shiny::observeEvent(input$dirChooseButton, {
+         temppath <- try(shinyFiles::parseDirPath(volumes, input$dirChooseButton) %>% as.character())
+         req(temppath) # only assign to the reactive once there is a path
+         path$path <- temppath  # updates the reactive value when directory is selected
+      })
+
+
+   } else {
+
+      # Find directory for a set of files - if no project folder specified present all computer
    shinyFiles::shinyDirChoose(input, id = "dirChooseButton", root = volumes)  # associated with DirButton - gets a path
 
+
+
+# When clicking the browse button user can choose a different folder: save the path as a reactive
    shiny::observeEvent(input$dirChooseButton, {
       temppath <- try(shinyFiles::parseDirPath(volumes, input$dirChooseButton) %>% as.character())
       req(temppath) # only assign to the reactive once there is a path
       path$path <- temppath  # updates the reactive value when directory is selected
    })
 
+   }
+
+   ## Show the selected path in the text box
    output$pathName <- shiny::renderText({
       req(!is.na(path$path))  # need actual path before displaying it on screen (prevents NA from showing up)
       path$path})
 
-   return(shiny::reactive(path$path))
+   return(shiny::reactive(path$path))  # return the path
 }
 
 

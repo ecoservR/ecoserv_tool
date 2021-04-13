@@ -10,12 +10,22 @@
 
 #' @return Nothing - but saves an RDS file with the project parameters
 #' @export
-launchWizard <- function(){
+launchWizard <- function(projwd = NULL){
 
-   appDir <- system.file("shiny-helpers", "setup_data", package = "ecoservR")
-   if (appDir == "") {
-      stop("Could not find wizard app.", call. = FALSE)
+   if (is.null(projwd)){
+      projwd <- getwd()
    }
 
-   shiny::runApp(appDir, display.mode = "normal")
-}
+   .GlobalEnv$projwd <- projwd
+   on.exit(rm(projwd, envir=.GlobalEnv))
+
+    appDir <- system.file("shiny-helpers", "setup_data", package = "ecoservR")
+
+    if (appDir == "") { stop("Could not find wizard app.", call. = FALSE) }
+    shiny::runApp(appDir, display.mode = "normal")
+
+    }
+
+
+
+

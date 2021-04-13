@@ -8,18 +8,23 @@
 ## To do:
 
 ## - create a selection menu for layers (like attributes) rather than having to type
-
+## - delete stuff tagged DELETE
 
 
 require(magrittr)
+require(shiny)
 
-source("funmod.R") # source functions and modules
-
+## No need to source the functions if they are placed within a "R" folder in app directory
+#source("funmod.R") # source functions and modules
+#source(system.file("shiny-helpers/setup_data/funmod.R", package = "ecoservR"))
 
 
 # Global stuff ------------------------------------------------------------
 
+# retrieve the user's working directory
+#user_proj <-  shiny::getShinyOption("projwd")
 
+user_proj <- projwd
 
 # UI ----------------------------------------------------------------------
 ui <- fluidPage(
@@ -28,20 +33,33 @@ ui <- fluidPage(
    shinyalert::useShinyalert(),
 
    tags$head(
-      shiny::includeCSS(file.path('www', 'theme.css'))),
+      shiny::includeCSS(file.path('www', 'theme.css'))
+   #shiny::includeCSS(system.file("shiny-helpers/setup_data/www/theme.css", package="ecoservR"))
+   ),
 
    shiny::titlePanel(
       title=div(id = "header")  # branding
    ),
 
+   ## Field to set up project path
+
+   div(id = "projectpath", class = "main-content",
+       shiny::titlePanel("Select your project folder"),
+       p("This is the folder where project parameters and model outputs should be stored. It should be automatically populated if you are working within an R project as recommended."),
+       shiny::fluidRow(
+       definePathsUI(id = "buttonproject",
+                     buttonLabel = "Project folder",
+                     winTitle = "Please select your project folder"),
+       )
+   ),
+
+   ## Field to set up all data inputs
+
    div(id = "setpaths", class = "main-content",
 
-       #shiny::mainPanel(width = 12,
-
        shiny::titlePanel("Select your data inputs"),
-       tableOutput("modaltable"),
 
-       p("For each data input you want to use, please navigate to the", strong("folder"), "containing the relevant files. These folders should be self-contained, i.e. not include other datasets. Sub-folders are allowed (e.g. mastermap tiles). Please refer to user guide for more information."),
+       p("For each data input you want to use, please navigate to the", strong("folder"), "(NOT individual files) containing the relevant data. These folders should be self-contained, i.e. not include other spatial datasets. Sub-folders are allowed (e.g. mastermap tiles). Please refer to user guide for more information."),
 
        shiny::fluidRow(
           shiny::column(6,
@@ -97,8 +115,8 @@ ui <- fluidPage(
        shinyjs::hidden(
           div(id = "step1_confirmation",
 
-            h5(icon("check-circle", class = NULL, lib = "font-awesome"), "All seems good! We'll use these datasets. Press next to continue."),
-            actionButton("nextpage", "Next")
+              h5(icon("check-circle", class = NULL, lib = "font-awesome"), "All seems good! We'll use these datasets. Press next to continue."),
+              actionButton("nextpage", "Next")
           )
        ),
 
@@ -130,14 +148,6 @@ ui <- fluidPage(
 
    shinyjs::hidden(div(id = "setproject", class = "main-content",
 
-                       shiny::titlePanel("Set your project folder"),
-
-                       p("Please select your project folder where outputs will be saved.
-         This should correspond to the folder where you are currently working in your R project."),
-
-                       definePathsUI(id = "projectpath",
-                                     buttonLabel = "Project folder",
-                                     winTitle = "Please select your project folder"),
 
                        textInput("projtitle", "Give your project a title",
                                  placeholder = "e.g. Dane catchment"),
@@ -195,484 +205,494 @@ ui <- fluidPage(
 # Server ------------------------------------------------------------------
 server <- function(input, output, session) {
 
-### Initialise reactive values -----
+   ### Initialise reactive values -----
 
-# an empty dataframe that we'll fill upon hitting the check button
-rv <- reactiveValues(df = NULL,
-                     realnames = vector(mode = "list", length = 10))   # list of attribute names from datasets
-
-
-# Collect file paths ------
-# they are all reactive expressions returned from module
-# Before a value is selected, value is NA
-paths <- reactiveValues(
-                        #mm = reactive("C:/BasemappeR/data/mastermap"), # for testing
-                        mm = callModule(definePaths, "button1"),
-                        studyArea = callModule(definePaths, "button2"),
-                        #green = reactive("C:/Basemapper/data/greenspace"), # for testing
-                        green = callModule(definePaths, "button3"),
-                        opgreen = callModule(definePaths, "button4"),
-                        #opgreen = reactive("C:/BasemappeR/data/opengreenspace"), # for testing
-                        corine = callModule(definePaths, "button5"),
-                        #corine = reactive("C:/BasemappeR/data/corine"), # for testing
-                        nfi = callModule(definePaths, "button6"),
-                        phi = callModule(definePaths, "button7"),
-                        crome = callModule(definePaths, "button8"),
-                        dtm = callModule(definePaths, "button9"),
-                        hedge = callModule(definePaths, "button10"),
-                        proj = callModule(definePaths, "projectpath"))
-
-
-### Data checking ------
-
-## Only enable Check button when compulsory datasets are not NA
-
-observeEvent(req(paths$mm(),
-               paths$studyArea(),
-               paths$opgreen()
-), {
-   shinyjs::enable("checkdata")
-})
-
-
-## When checked is clicked, create the dataframe with all data
-# This will record all the paths (user inputs) and set the initial values for the layer and attribute checks
-
-observeEvent(input$checkdata, {
-
-   rv$df <- dplyr::tibble(
-
-      dataset = c("mm",
-                  "studyArea",
-                  "OS_Greenspace",
-                  "OS_OpenGreenspace",
-                  "corine",
-                  "nfi",
-                  "phi",
-                  "crome",
-                  "terrain",
-                  "hedgerows"),
-
-      prettynames = c(  # full dataset names for better pop up messages
-         "OS MasterMap",
-         "your study area",
-         "OS Greenspace",
-         "OS Open Greenspace",
-         "CORINE land cover",
-         "National Forest Inventory",
-         "Priority Habitat Inventory",
-         "Crop Map of England",
-         "digital terrain model",
-         "hedgerow linear data"
-      ),
-
-      path = c(
-         paths$mm(),
-         paths$studyArea(),
-         paths$green(),
-         paths$opgreen(),
-         paths$corine(),
-         paths$nfi(),
-         paths$phi(),
-         paths$crome(),
-         paths$dtm(),
-         paths$hedge()
-      ),
-
-      type = try(guessFiletypeV(path)),  # automatically detect extension
-
-      # when specified, layer name must contain this string
-      layer = c("TopographicArea",
-                NA_character_,
-                NA_character_,
-                "GreenspaceSite",
-                NA_character_,
-                NA_character_,
-                NA_character_,
-                NA_character_,
-                NA_character_,
-                NA_character_),
-
-      cols = c(
-         mm = list(c("TOID" = "TOID", # mmcols
-                     "PhysicalLevel" = "PhysicalLevel",
-                     "Group" = "DescriptiveGroup",
-                     "Term" = "DescriptiveTerm",
-                     "Theme" = "Theme",
-                     "Make" = "Make")),
-
-         SA = list(c(NA_character_)), # studyarea
-
-         green = list(c("TOID" = "toid",
-                        "priFunc" = "priFunc")),  # green cols
-
-         opgreen = list(c("id" = "id", # opgreen cols
-                          "op_function" = "function.")),
-
-         corine = list(c("code" = "Code_18")),  # corine cols  IF VECTOR FORMAT
-
-         nfi = list(c("IFT_IOA" = "IFT_IOA",
-                      "CATEGORY" = "CATEGORY")), # nfi cols
-
-         phi = list(c("Main_Habit" = "Main_Habit")), # phi cols
-
-         crome = list(c("cromeid" = "cromeid",  # crome cols
-                        "lucode" = "lucode")),
-
-         dtm = list(c(NA_character_)), # dtm
-
-         hedge = list(c(NA_character_))  # hedges
-      ),
-      realnames = list(NA)
-   )
-})
-
-
-### File input check ----
-
-validtype <- reactive({
-   req(rv$df)
-
-   if (any(grepl("error", rv$df$type))){
-      FALSE } else {TRUE}
-})
-
-
-## If file extension cannot be detected, show a pop up
-## Currently the table doesn't show when working in R studio, but apparently this might resolve once published
-
-observeEvent({
-   c(validtype(),
-     input$checkdata
-     )},
-   {
-
-   if (isFALSE(validtype())){
-
-   errortable <- rv$df[grepl("error", rv$df$type), c("prettynames", "type")] %>%
-      dplyr::mutate(type = dplyr::case_when(
-         type == "error folder" ~ "Directory not found. Check file path.",
-         type == "error no" ~ "No spatial files found in folder or subfolders.",
-         type == "error multiple" ~ "Multiple spatial file extensions detected."
-      ))
-   names(errortable) <- c("Dataset", "Error")
-
-    shinyalert::shinyalert(title = "Oops!",
-                            text = tableOutput("errormsg_data"),
-                             type = "error",
-                             html = TRUE)
-
-    output$errormsg_data <- renderTable(errortable)
-   }
-})
+   # an empty dataframe that we'll fill upon hitting the check button
+   rv <- reactiveValues(df = NULL,
+                        realnames = vector(mode = "list", length = 10))   # list of attribute names from datasets
 
 
 
-### Layer name check -----
+   # Collect file paths ------
+   # they are all reactive expressions returned from module
+   # Before a value is selected, value is NA
 
-## Create list of layers for mm and opengreenspace
-
-layers <- reactive({
-
-   req(isTRUE(validtype()))  # only compute once data inputs successfully checked
-
- #  req(rv$df[rv$df$dataset == "mm", ][["path"]])
-
-   # list all layer names in mm folder
-   mm <- lapply(list.files(rv$df[rv$df$dataset == "mm", ][["path"]],
-                           pattern = paste0(guessFiletype(rv$df[rv$df$dataset == "mm", ][["path"]]),"$"),
-                           recursive=TRUE,full.names = TRUE),
-                function(x) sf::st_layers(x)[[1]])
-
-   # list all layer names in opgr folder
-   opgr <- lapply(list.files(rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["path"]],
-                             pattern = paste0(guessFiletype(rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["path"]]),"$"),
-                             recursive=TRUE,full.names = TRUE),
-                  function(x) sf::st_layers(x)[[1]])
-
-   layerlist <- list(mm, opgr)
-   names(layerlist) <- c("mm", "OS_OpenGreenspace") # naming so can be used in subsetting
-   return(layerlist)
-
-})
-
-## Compare the list of layer names to the search string
-
-validlayers <- reactive({
-
-   test <- mapply(function(x, n)
-      any(grepl(rv$df[rv$df$dataset == n, "layer"], x)),
-      x = layers(),
-      n = names(layers())
+   paths <- reactiveValues(
+      #mm = reactive("C:/BasemappeR/data/mastermap"), # for testing
+      mm = callModule(definePaths, "button1", defaultpath = user_proj),
+      studyArea = callModule(definePaths, "button2", defaultpath = user_proj),
+      #green = reactive("C:/Basemapper/data/greenspace"), # for testing
+      green = callModule(definePaths, "button3", defaultpath = user_proj),
+      opgreen = callModule(definePaths, "button4", defaultpath = user_proj),
+      #opgreen = reactive("C:/BasemappeR/data/opengreenspace"), # for testing
+      corine = callModule(definePaths, "button5", defaultpath = user_proj),
+      #corine = reactive("C:/BasemappeR/data/corine"), # for testing
+      nfi = callModule(definePaths, "button6", defaultpath = user_proj),
+      phi = callModule(definePaths, "button7", defaultpath = user_proj),
+      crome = callModule(definePaths, "button8", defaultpath = user_proj),
+      dtm = callModule(definePaths, "button9", defaultpath = user_proj),
+      hedge = callModule(definePaths, "button10", defaultpath = user_proj),
+      proj = callModule(definePaths, "buttonproject", defaultpath = user_proj, set = TRUE)
    )
 
-   return(test) # return the result of the logical test
-})
-
-## Ask user for input if invalid layers
-
-# create empty reactive value to store input
-newlayers <- reactiveValues(mm = NULL,
-                            opgr = NULL)
-
-# if mm invalid, trigger pop up and save input
-observe({
-   if (!validlayers()[[1]]) {
-      newlayers$mm <- callModule(modalModule, "modal_mm",
-                                 layername = "the layer for OS MasterMap",
-                                 holder = "e.g. TopographicArea",
-                                 searchlist = layers()$mm)
-   }
-})
-
-# if there is an input, update working df - WORKS!!
-observe({
-   req(newlayers$mm, newlayers$mm())
-
-   rv$df[rv$df$dataset == "mm", "layer"] <- newlayers$mm()
-})
 
 
-# once mm verified AND if greenspace invalid, fix it too
-observe({
+   ### Data checking ------
 
-   if (validlayers()[[1]] && !validlayers()[[2]]) {
+   ## Only enable Check button when compulsory datasets are not NA
 
-      newlayers$opgr <- callModule(modalModule, "modal_opgr",
-                                   layername = "the layer for OS Open Greenspace",
-                                   holder = "e.g. GreenspaceSite",
-                                   searchlist = layers()$OS_OpenGreenspace)
-   }
-})
-
-# if there is an input, update working df - WORKS!!
-observe({
-   req(newlayers$opgr, newlayers$opgr()) # object exists AND its value is non null
-
-   rv$df[rv$df$dataset == "OS_OpenGreenspace", "layer"] <- newlayers$opgr()
-})
+   observeEvent(req(paths$mm(),
+                    paths$studyArea(),
+                    paths$opgreen()
+   ), {
+      shinyjs::enable("checkdata")
+   })
 
 
+   ## When checked is clicked, create the dataframe with all data
+   # This will record all the paths (user inputs) and set the initial values for the layer and attribute checks
+
+   observeEvent(input$checkdata, {
+
+      rv$df <- dplyr::tibble(
+
+         dataset = c("mm",
+                     "studyArea",
+                     "OS_Greenspace",
+                     "OS_OpenGreenspace",
+                     "corine",
+                     "nfi",
+                     "phi",
+                     "crome",
+                     "terrain",
+                     "hedgerows"),
+
+         prettynames = c(  # full dataset names for better pop up messages
+            "OS MasterMap",
+            "your study area",
+            "OS Greenspace",
+            "OS Open Greenspace",
+            "CORINE land cover",
+            "National Forest Inventory",
+            "Priority Habitat Inventory",
+            "Crop Map of England",
+            "digital terrain model",
+            "hedgerow linear data"
+         ),
+
+         path = c(
+            paths$mm(),
+            paths$studyArea(),
+            paths$green(),
+            paths$opgreen(),
+            paths$corine(),
+            paths$nfi(),
+            paths$phi(),
+            paths$crome(),
+            paths$dtm(),
+            paths$hedge()
+         ),
+
+         type = try(guessFiletypeV(path)),  # automatically detect extension
+
+         # when specified, layer name must contain this string
+         layer = c("TopographicArea",
+                   NA_character_,
+                   NA_character_,
+                   "GreenspaceSite",
+                   NA_character_,
+                   NA_character_,
+                   NA_character_,
+                   NA_character_,
+                   NA_character_,
+                   NA_character_),
+
+         cols = c(
+            mm = list(c("TOID" = "TOID", # mmcols
+                        "PhysicalLevel" = "PhysicalLevel",
+                        "Group" = "DescriptiveGroup",
+                        "Term" = "DescriptiveTerm",
+                        "Theme" = "Theme",
+                        "Make" = "Make")),
+
+            SA = list(c(NA_character_)), # studyarea
+
+            green = list(c("TOID" = "toid",
+                           "priFunc" = "priFunc")),  # green cols
+
+            opgreen = list(c("id" = "id", # opgreen cols
+                             "op_function" = "function.")),
+
+            corine = list(c("code" = "Code_18")),  # corine cols  IF VECTOR FORMAT
+
+            nfi = list(c("IFT_IOA" = "IFT_IOA",
+                         "CATEGORY" = "CATEGORY")), # nfi cols
+
+            phi = list(c("Main_Habit" = "Main_Habit")), # phi cols
+
+            crome = list(c("cromeid" = "cromeid",  # crome cols
+                           "lucode" = "lucode")),
+
+            dtm = list(c(NA_character_)), # dtm
+
+            hedge = list(c(NA_character_))  # hedges
+         ),
+         realnames = list(NA)
+      )
+   })
 
 
-# ## testing that logic is sound - yes
-# observe({
-#    if (all(validlayers())){
-#       print("yay")} else {print("booh")}  # works when supposed to
-#
-# })
+   ### File input check ----
+
+   validtype <- reactive({
+      req(rv$df)
+
+      if (any(grepl("error", rv$df$type))){
+         FALSE } else {TRUE}
+   })
 
 
-### Attribute name check -----
+   ## If file extension cannot be detected, show a pop up informing the user of errors
 
-## When layers are sorted, check all required attributes
+   observeEvent({
+      c(validtype(),
+        input$checkdata
+      )},
+      {
 
-# This observer waits for other validity checks to pass, and then stores all the attributes fetched from the data into a reactive list (that is NOT part of the rv$df, otherwise would cause re-evaluation of all the checks)
+         if (isFALSE(validtype())){
 
-observe({
-   if (isTRUE(validtype()) && all(validlayers())) {
+            errortable <- rv$df[grepl("error", rv$df$type), c("prettynames", "type")] %>%
+               dplyr::mutate(type = dplyr::case_when(
+                  type == "error folder" ~ "Directory not found. Check file path.",
+                  type == "error no" ~ "No spatial files found in folder or subfolders.",
+                  type == "error multiple" ~ "Multiple spatial file extensions detected."
+               ))
+            names(errortable) <- c("Dataset", "Error")
 
-  # only evaluate when other checks have passed and the df is created
-
-   message("Data inputs and layers are valid, checking attributes")
-
-      for (i in 1:nrow(rv$df)){
-
-         # for each data input that has been specified (avoid empty paths and raster files which don't have attributes)
-         if (!is.na(rv$df[i, ][["path"]]) && !is.null(rv$df[i, ][["path"]]) &&
-             !rv$df[i, ][["type"]] %in% c("asc", "tif")){
-
-            rv$realnames[i] <- checkAttrNames(  # compare required attributes to headers in data
-               folder = rv$df[i, ][["path"]],
-               type = rv$df[i, ][["type"]],
-               layerstring = if (!is.na(rv$df[i, ][["layer"]]) && !is.null(rv$df[i, ][["layer"]])){
-                  # the layer name is a regular expression, not the actual name always, so we do a search
-                  # for the first layer containing it
-                  rv$df[i, ][["layer"]]
-               } else NULL,
-               user_names = rv$df[i, ][["cols"]][[1]],
-               name = rv$df[i, ][["dataset"]]
-            )
-
-            print(paste("check ",rv$df[i, ][["prettynames"]]))
+            shinyalert::shinyalert(title = "Oops!",
+                                   text = kableExtra::kbl(errortable, format= "html"),  # rendering table as HTML so displays in modal
+                                   type = "error",
+                                   html = TRUE)
          }
+      })
+
+
+
+   ### Layer name check -----
+
+   ## Create list of layers for mm and opengreenspace
+
+   layers <- reactive({
+
+      req(isTRUE(validtype()))  # only compute once data inputs successfully checked
+
+      # list all layer names in mm folder
+      mm <- lapply(list.files(rv$df[rv$df$dataset == "mm", ][["path"]],
+                              pattern = paste0(guessFiletypeShiny(rv$df[rv$df$dataset == "mm", ][["path"]]),"$"),
+                              recursive=TRUE, full.names = TRUE),
+                   function(x) sf::st_layers(x)[[1]])
+
+      # list all layer names in opgr folder
+      opgr <- lapply(list.files(rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["path"]],
+                                pattern = paste0(guessFiletypeShiny(rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["path"]]),"$"),
+                                recursive=TRUE,full.names = TRUE),
+                     function(x) sf::st_layers(x)[[1]])
+
+      layerlist <- list(mm, opgr)
+      names(layerlist) <- c("mm", "OS_OpenGreenspace") # naming so can be used in subsetting
+
+      print("Executed line 381")
+      return(layerlist)
+
+   })
+
+   ## Compare the list of layer names to the search string
+
+   validlayers <- reactive({
+
+      test <- mapply(function(x, n)
+         any(grepl(rv$df[rv$df$dataset == n, "layer"], x)),
+         x = layers(),
+         n = names(layers())
+      )
+
+      print("Executed line 407")
+      return(test) # return the result of the logical test
+   })
+
+   ## Ask user for input if invalid layers
+
+   # create empty reactive value to store input
+   newlayers <- reactiveValues(mm = NULL,
+                               opgr = NULL)
+
+   # if mm invalid, trigger pop up and save input
+   observe({
+      if (!validlayers()[[1]]) {
+         newlayers$mm <- callModule(modalModule, "modal_mm",
+                                    layername = "the layer for OS MasterMap",
+                                    holder = "e.g. TopographicArea",
+                                    searchlist = layers()$mm)
       }
+   })
 
-   } # end of if
-})
+   # if there is an input, update working df - WORKS!!
+   observe({
+      req(newlayers$mm, newlayers$mm())
 
-## Compare the actual names to the expected names, and bring a pop-up if clarification is required
+      rv$df[rv$df$dataset == "mm", "layer"] <- newlayers$mm()
+   })
 
-faulty <- reactive({
-   req(rv$realnames)
 
-   faultylist <- vector(mode = "list", length = length(rv$df$dataset))  # initialise empty list
-   names(faultylist) <- rv$df$dataset # name the list
+   # once mm verified AND if greenspace invalid, fix it too
+   observe({
 
-   for (i in 1:length(faultylist)){  # loop through each dataset and check which attributes are wrong
+      if (validlayers()[[1]] && !validlayers()[[2]]) {
 
-      if(is.na(rv$df[i, ][["path"]]) | is.null(rv$df[i, ][["path"]]) |
-         rv$df[i, ][["dataset"]] %in% c("studyArea", "dtm", "hedgerows") |
-         rv$df[i, ][["type"]] %in% c("tif", "asc")){
-         # no attributes needed for unused datasets, SA, dtm or hedge, or raster data
-
-         faultylist[[i]] <- c(as.integer(0))[-1]  # create an empty integer
-
-      } else { # for all other datasets we need to know which attributes are not named properly
-         faultylist[[i]] <- which(!rv$df[i, ][["cols"]][[1]] %in% rv$realnames[[i]])
+         newlayers$opgr <- callModule(modalModule, "modal_opgr",
+                                      layername = "the layer for OS Open Greenspace",
+                                      holder = "e.g. GreenspaceSite",
+                                      searchlist = layers()$OS_OpenGreenspace)
       }
-   } # end of loop
+   })
 
-   return(faultylist)
-})
+   # if there is an input, update working df - WORKS!!
+   observe({
+      req(newlayers$opgr, newlayers$opgr()) # object exists AND its value is non null
 
-newattr <- reactiveValues(name = NULL)  # empty reactive to store attribute input
-
-## Reactively check whether there are any problems with names
-## TO DO: Eventually we could pass rv$realnames as choices to a selectinput instead,
-# would require a new modal module to be created
-
-observe({
-
-   req(isTRUE(validtype()) && all(validlayers()), rv$realnames, faulty())
-
-   if (any(lengths(faulty()) > 0)){
-
-      # Because we're in an observer, we can keep evaluating the first condition,
-      # and it will update as cases are resolved
-
-     ds <- names(which(lengths(faulty()) > 0)[1]) # first dataset that has a problem
-     index <- faulty()[[ds]] # extract index of wrong attributes for this dataset
-
-      newattr$name <- callModule(attrPopupModule, paste0("modal_mmcols_", ds, index[1]), # unique id for modal
-                                 dataset = rv$df[rv$df$dataset == ds, ][["prettynames"]],
-                                 attrname = names(rv$df[rv$df$dataset == ds, ][["cols"]][[1]])[index[1]],
-                                 searchlist = rv$realnames[which(rv$df$dataset == ds)])
-
-      print(rv$realnames[which(rv$df$dataset == ds)])
-
-      newattr$ds <- ds
-      newattr$index <- index[1]
-
-
-   } else {newattr$name <- reactive(NULL)} # NULL so that no assignment is carried in next observer if nothing needs changing
-
-})
-
-## Assign the name specified by user into the dataframe
-observe({
-   req(newattr$name, newattr$name())
-
-   rv$df[rv$df$dataset == newattr$ds, ][["cols"]][[1]][newattr$index] <- newattr$name()
-})
+      rv$df[rv$df$dataset == "OS_OpenGreenspace", "layer"] <- newlayers$opgr()
+   })
 
 
 
-## Dataframe that appears to confirm paths and layers ---------
 
-observeEvent(input$checkdata, {
-   shinyjs::showElement("datapreview")
-})
+   # ## testing that logic is sound - yes
+   # observe({
+   #    if (all(validlayers())){
+   #       print("yay")} else {print("booh")}  # works when supposed to
+   #
+   # })
 
-output$df <- renderTable({
-   req(input$checkdata)
-   dplyr::filter(rv$df[,c(1:5)], !is.na(path)) %>%
-      dplyr::select(-dataset) %>%
-      dplyr::rename(dataset = prettynames)
-})
 
-# Move to project parameters page -----------------------------------------
+   ### Attribute name check -----
 
-## When all tests are successful, show confirmation and action button
+   ## When layers are sorted, check all required attributes
 
-observe({
+   # This observer waits for other validity checks to pass, and then stores all the attributes
+   # fetched from the data into a reactive list (that is NOT part of the rv$df, otherwise would cause re-evaluation of all the checks)
 
-   req(isTRUE(validtype()) && all(validlayers()), rv$realnames, faulty())
+   observe({
+      req(isTRUE(validtype()) && all(validlayers())) #{
 
-   if (all(lengths(faulty()) == 0)){
+         # only evaluate when other checks have passed and the df is created
 
-  shinyjs::showElement("step1_confirmation")
-   }
+         #message("Data inputs and layers are valid, checking attributes")
+
+         for (i in 1:nrow(rv$df)){
+
+            isolate({
+            # for each data input that has been specified (avoid empty paths and raster files which don't have attributes)
+            if (!is.na(rv$df[i, ][["path"]]) && !is.null(rv$df[i, ][["path"]]) &&
+                !rv$df[i, ][["type"]] %in% c("asc", "tif")){
+
+               rv$realnames[i] <- checkAttrNames(  # compare required attributes to headers in data
+                  folder = rv$df[i, ][["path"]],
+                  type = rv$df[i, ][["type"]],
+                  layerstring = if (!is.na(rv$df[i, ][["layer"]]) && !is.null(rv$df[i, ][["layer"]])){
+                     # the layer name is a regular expression, not the actual name always, so we do a search
+                     # for the first layer containing it
+                     rv$df[i, ][["layer"]]
+                  } else NULL,
+                  user_names = rv$df[i, ][["cols"]][[1]],
+                  name = rv$df[i, ][["dataset"]]
+               )
+
+            }
+
+            }) # end of isolate
+
+            #print(paste("check ",rv$df[i, ][["prettynames"]]))
+         }
+
+
+
+      #} # end of if
+   })
+
+   ## Compare the actual names to the expected names, and bring a pop-up if clarification is required
+
+   faulty <- reactive({
+      req(rv$realnames)
+
+      faultylist <- vector(mode = "list", length = length(rv$df$dataset))  # initialise empty list
+      names(faultylist) <- rv$df$dataset # name the list
+
+      for (i in 1:length(faultylist)){  # loop through each dataset and check which attributes are wrong
+
+         if(is.na(rv$df[i, ][["path"]]) | is.null(rv$df[i, ][["path"]]) |
+            rv$df[i, ][["dataset"]] %in% c("studyArea", "dtm", "hedgerows") |
+            rv$df[i, ][["type"]] %in% c("tif", "asc")){
+            # no attributes needed for unused datasets, SA, dtm or hedge, or raster data
+
+            faultylist[[i]] <- c(as.integer(0))[-1]  # create an empty integer
+
+         } else { # for all other datasets we need to know which attributes are not named properly
+            faultylist[[i]] <- which(!rv$df[i, ][["cols"]][[1]] %in% rv$realnames[[i]])
+         }
+      } # end of loop
+
+      return(faultylist)
+   })
+
+   newattr <- reactiveValues(name = NULL)  # empty reactive to store attribute input
+
+   ## Reactively check whether there are any problems with names
+   ## TO DO: Eventually we could pass rv$realnames as choices to a selectinput instead,
+   # would require a new modal module to be created
+
+   observe({
+
+      req(isTRUE(validtype()) && all(validlayers()), rv$realnames, faulty())
+
+      if (any(lengths(faulty()) > 0)){
+
+         # Because we're in an observer, we can keep evaluating the first condition,
+         # and it will update as cases are resolved
+
+         ds <- names(which(lengths(faulty()) > 0)[1]) # first dataset that has a problem
+         index <- faulty()[[ds]] # extract index of wrong attributes for this dataset
+
+         newattr$name <- callModule(attrPopupModule, paste0("modal_mmcols_", ds, index[1]), # unique id for modal
+                                    dataset = rv$df[rv$df$dataset == ds, ][["prettynames"]],
+                                    attrname = names(rv$df[rv$df$dataset == ds, ][["cols"]][[1]])[index[1]],
+                                    searchlist = rv$realnames[which(rv$df$dataset == ds)])
+
+         print(rv$realnames[which(rv$df$dataset == ds)])
+
+         newattr$ds <- ds
+         newattr$index <- index[1]
+
+
+      } else {newattr$name <- reactive(NULL)} # NULL so that no assignment is carried in next observer if nothing needs changing
+
+   })
+
+   ## Assign the name specified by user into the dataframe
+   observe({
+      req(newattr$name, newattr$name())
+
+      rv$df[rv$df$dataset == newattr$ds, ][["cols"]][[1]][newattr$index] <- newattr$name()
+   })
+
+
+
+   ## Dataframe that appears to confirm paths and layers ---------
+
+   observeEvent(input$checkdata, {
+      shinyjs::showElement("datapreview")
+   })
+
+   output$df <- renderTable({
+      req(input$checkdata)
+      dplyr::filter(rv$df[,c(1:5)], !is.na(path)) %>%
+         dplyr::select(-dataset) %>%
+         dplyr::rename(dataset = prettynames)
+   })
+
+   # Move to project parameters page -----------------------------------------
+
+   ## When all tests are successful, show confirmation and action button
+
+   observe({
+
+      req(isTRUE(validtype()) && all(validlayers()), rv$realnames, faulty())
+
+      if (all(lengths(faulty()) == 0)){
+
+         shinyjs::showElement("step1_confirmation")
+      }
 
    })
 
 
-## When next is clicked, show second page
+   ## When next is clicked, show second page
 
-observeEvent(input$nextpage, {
-   shinyjs::hideElement("setpaths")
-   shinyjs::showElement("setproject")
+   observeEvent(input$nextpage, {
+      shinyjs::hideElement("setpaths")
+      shinyjs::hideElement("projectpath")
+      shinyjs::showElement("setproject")
 
-})
-
-
-params = reactiveValues()  # empty reactive values to store parameters
+   })
 
 
-## When all inputs are there, enable button to save log
+   params = reactiveValues()  # empty reactive values to store parameters
 
-observeEvent(req(paths$proj, paths$proj(), input$projtitle), {
 
-   if (file.access(paths$proj()) == 0){
-      # if write permission ok, enable button
-      shinyjs::enable("setproj")} else {
-         # otherwise bring a popup
-         shinyalert::shinyalert(title = "Please select another folder",
-                                text = "You do not appear to have write permission to this folder. Please select a different one.",
-                                type = "warning")
+   ## When all inputs are there, enable button to save log
+
+   observeEvent(req(paths$proj, paths$proj(), input$projtitle), {
+
+      if (file.access(paths$proj()) == 0){
+         # if write permission ok, enable button
+         shinyjs::enable("setproj")} else {
+            # otherwise bring a popup
+            shinyalert::shinyalert(title = "Please select another folder",
+                                   text = "You do not appear to have write permission to this folder. Please select a different one.",
+                                   type = "warning")
+         }
+
+   })
+
+
+   observe({
+      # Save inputs to params object
+
+      params$SAbuffer = input$SAbuffer  # study area buffer
+      params$gardensize = input$gardensize    # max size of a private garden, in m2
+      params$gardenshape = input$gardenshape    # shape index threshold for a garden
+      params$housemax = input$housemax    # max size for a house
+      params$housemin = input$housemin       # min size for a house
+      params$arable_min = input$arable_min   # min area (in m2) to consider a B4/J11 arable (smaller will become B4)
+      params$improved_max = input$improved_max # area (m2) above which polygons considered too big to be B4 (will become J11)
+      params$montane = input$montane       # elevation for montane habitats
+      params$upland = input$upland        # elevation limit separating lowlands and uplands; used to make assumptions about semi improved vs improved grasslands
+      params$slope_semi = input$slope_semi     # slope threshold for semi-improved grasslands
+      params$slope_unimp = input$slope_unimp    # slope threshold for unimproved grasslands
+      params$slope_dry = input$slope_dry      # slope threshold for dry slopes (turning uncertain wet stuff into heather) *check ArcGIS for default
+
+   })
+
+   # save the log file to project folder
+
+   observeEvent(input$setproj, {
+
+      final_log <- list(
+         title = gsub(" ", "_", input$projtitle),
+         projpath = paths$proj(),
+         output_temp = file.path(paths$proj(), "intermediary"),
+         df = rv$df, # add back the datasets we're not using
+         parameters = reactiveValuesToList(params)
+      )
+
+      saveRDS(final_log, file = file.path(paths$proj(),
+                                          paste0(gsub(" ", "_", input$projtitle),
+                                                 "_projectlog.RDS")))
+
+   })
+
+   observe({
+      req(input$setproj)
+      if (file.exists(file.path(paths$proj(),
+                                paste0(gsub(" ", "_", input$projtitle),
+                                       "_projectlog.RDS"))
+      )){
+         shinyalert::shinyalert(title = "Success!",
+                                text = "You can now exit the wizard and return to your R session.",
+                                type = "success")
       }
 
-})
-
-
-observe({
-   # Save inputs to params object
-
-   params$SAbuffer = input$SAbuffer  # study area buffer
-   params$gardensize = input$gardensize    # max size of a private garden, in m2
-   params$gardenshape = input$gardenshape    # shape index threshold for a garden
-   params$housemax = input$housemax    # max size for a house
-   params$housemin = input$housemin       # min size for a house
-   params$arable_min = input$arable_min   # min area (in m2) to consider a B4/J11 arable (smaller will become B4)
-   params$improved_max = input$improved_max # area (m2) above which polygons considered too big to be B4 (will become J11)
-   params$montane = input$montane       # elevation for montane habitats
-   params$upland = input$upland        # elevation limit separating lowlands and uplands; used to make assumptions about semi improved vs improved grasslands
-   params$slope_semi = input$slope_semi     # slope threshold for semi-improved grasslands
-   params$slope_unimp = input$slope_unimp    # slope threshold for unimproved grasslands
-   params$slope_dry = input$slope_dry      # slope threshold for dry slopes (turning uncertain wet stuff into heather) *check ArcGIS for default
-
-})
-
-# save the log file to project folder
-
-observeEvent(input$setproj, {
-
-   final_log <- list(
-      title = gsub(" ", "_", input$projtitle),
-      projpath = paths$proj(),
-      output_temp = file.path(paths$proj(), "intermediary"),
-      df = rv$df, # add back the datasets we're not using
-      parameters = reactiveValuesToList(params)
-   )
-
-   saveRDS(final_log, file = file.path(paths$proj(),
-                                       paste0(gsub(" ", "_", input$projtitle),
-                                              "_projectlog.RDS")))
-
-})
-
-observe({
-   req(input$setproj)
-   if (file.exists(file.path(paths$proj(),
-                             paste0(gsub(" ", "_", input$projtitle),
-                                    "_projectlog.RDS"))
-   )){
-      shinyalert::shinyalert(title = "Success!",
-                             text = "You can now exit the wizard and return to your R session.",
-                             type = "success")
-   }
-
-})
+   })
 
 
 
