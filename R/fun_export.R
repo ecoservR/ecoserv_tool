@@ -124,14 +124,18 @@ message("RDS version saved as ", file.path(final_folder, paste0(title,"_basemap_
 
       mm <- do.call(rbind, mm)
 
-      st_write(mm, dsn = file.path(final_folder, paste0(title,"_basemap_final.gpkg")))
+      st_write(mm,
+               dsn = file.path(final_folder, paste0(title,"_basemap_final.gpkg")),
+               append = FALSE)
 
    } else {
 
      # save series of named tiles
 
       mapply(function(x, n){
-         st_write(x, dsn = file.path(final_folder, paste0(title, "_", n,"_basemap_final.gpkg")))
+         st_write(x,
+                  dsn = file.path(final_folder, paste0(title, "_", n,"_basemap_final.gpkg")),
+                  append = FALSE)
          },
          x = mm,
          n = names(mm))
@@ -158,6 +162,10 @@ if (inherits(mm, "list")){
 #summary$area_ha <- round(summary$area_ha, digits = 2)
 #summary$cover_pct <- round(summary$cover_pct, digits = 2)
 
+## Sort summary in decreasing order
+
+   summary <- summary[order(summary$area_ha, decreasing = TRUE),]
+
 # Save a HTML summary table
    kableExtra::save_kable(
       kableExtra::kbl(summary, format = "html",
@@ -174,13 +182,7 @@ if (inherits(mm, "list")){
 
    message(paste0("Export completed. Process took ",
                   round(difftime(timeB, timeA, units = "mins"), digits = 1), " minutes."))
-   # return({
-   #    ## returns the objects in the global environment
-   #    invisible({
-   #       mm <<- mm
-   #       studyAreaBuffer <<- studyAreaBuffer
-   #    })
-   # })
+
 
    on.exit(invisible(gc())) # garbage collection - return some memory to computer
 
@@ -245,7 +247,9 @@ preview_basemap <- function(mm = parent.frame()$mm,
 
    x <- checkgeometry(x, "POLYGON")
 
-  st_write(x, dsn = file.path(projectLog$projpath, paste0(projectLog$title,"_basemap_preview.gpkg")))
+  st_write(x,
+           dsn = file.path(projectLog$projpath, paste0(projectLog$title,"_basemap_preview.gpkg")),
+           append = FALSE)
 
    message("Preview exported to ", file.path(projectLog$projpath, paste0(projectLog$title,"_basemap_preview.gpkg")))
 
