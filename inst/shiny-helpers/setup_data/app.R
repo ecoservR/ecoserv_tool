@@ -402,7 +402,6 @@ server <- function(input, output, session) {
       layerlist <- list(mm, opgr)
       names(layerlist) <- c("mm", "OS_OpenGreenspace") # naming so can be used in subsetting
 
-      print("Executed line 381")
       return(layerlist)
 
    })
@@ -417,7 +416,6 @@ server <- function(input, output, session) {
          n = names(layers())
       )
 
-      print("Executed line 407")
       return(test) # return the result of the logical test
    })
 
