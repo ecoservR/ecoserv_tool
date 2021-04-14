@@ -27,7 +27,8 @@
 #' @return Two rasters with capacity scores: one with raw scores (arbitrary units), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_access_nature <- function(x, studyArea,
+capacity_access_nature <- function(x = parent.frame()$mm,
+                                   studyArea = parent.frame()$studyArea,
                                prow,
                                crow,
                                lnr,

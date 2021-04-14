@@ -21,7 +21,9 @@
 #' @return Two rasters with capacity scores: one with raw scores (arbitrary units), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_noise_reg <- function(x, studyArea, res = 5,
+capacity_noise_reg <- function(x = parent.frame()$mm,
+                               studyArea = parent.frame()$studyArea,
+                               res = 5,
                                short = 30, local = 300,
                                threshold = 500,
                                projectLog = parent.frame()$projectLog,

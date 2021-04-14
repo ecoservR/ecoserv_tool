@@ -27,7 +27,9 @@
 #' @return Two rasters with capacity scores: one with raw scores (arbitrary units), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_air_purif <- function(x, studyArea, res = 5,
+capacity_air_purif <- function(x = parent.frame()$mm,
+                               studyArea = parent.frame()$studyArea,
+                               res = 5,
                          short = 20, local = 100,
                          buffer = 100,
                          threshold = 100,

@@ -18,7 +18,9 @@
 #' @return Two rasters with capacity scores: one with raw scores (in tons C per pixel), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_carbon <- function(x, studyArea, res = 5,
+capacity_carbon <- function(x = parent.frame()$mm,
+                            studyArea = parent.frame()$studyArea,
+                            res = 5,
                             projectLog = parent.frame()$projectLog,
                             runtitle = parent.frame()$runtitle,
                             save = NULL

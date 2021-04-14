@@ -23,7 +23,9 @@
 #' @return Two rasters with capacity scores: one with raw scores (0-1: likelihood that a pollinator will visit a pixel), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_pollination <- function(x, studyArea, res = 5,
+capacity_pollination <- function(x = parent.frame()$mm,
+                                 studyArea = parent.frame()$studyArea,
+                                 res = 5,
                                dist = 20,
                                elev = NULL,
                                DTM = NULL,

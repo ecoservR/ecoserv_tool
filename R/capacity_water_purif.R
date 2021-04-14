@@ -21,7 +21,9 @@
 #' @return Two rasters with capacity scores: one with raw scores (arbitrary units), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_water_purif <- function(x, studyArea, DTM = NULL, spr = NULL,
+capacity_water_purif <- function(x = parent.frame()$mm,
+                                 studyArea = parent.frame()$studyArea,
+                                 DTM = NULL, spr = NULL,
                                  res = 5,
                                  threshold = 500,
                                  projectLog = parent.frame()$projectLog,

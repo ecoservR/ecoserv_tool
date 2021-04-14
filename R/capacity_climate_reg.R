@@ -19,7 +19,9 @@
 #' @return Two rasters with capacity scores: one with raw scores (arbitrary units), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_climate_reg <- function(x, studyArea, res = 5,
+capacity_climate_reg <- function(x = parent.frame()$mm,
+                                 studyArea = parent.frame()$studyArea,
+                                 res = 5,
                                local = 200,
                                projectLog = parent.frame()$projectLog,
                                runtitle = parent.frame()$runtitle,
