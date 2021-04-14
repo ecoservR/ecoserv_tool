@@ -5,8 +5,8 @@
 \title{Carbon Storage Capacity Model}
 \usage{
 capacity_carbon(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   res = 5,
   projectLog = parent.frame()$projectLog,
   runtitle = parent.frame()$runtitle,

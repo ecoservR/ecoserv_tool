@@ -5,8 +5,8 @@
 \title{Climate Regulation Capacity Model}
 \usage{
 capacity_climate_reg(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   res = 5,
   local = 200,
   projectLog = parent.frame()$projectLog,

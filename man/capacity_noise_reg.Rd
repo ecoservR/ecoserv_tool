@@ -5,8 +5,8 @@
 \title{Noise Regulation Capacity Model}
 \usage{
 capacity_noise_reg(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   res = 5,
   short = 30,
   local = 300,

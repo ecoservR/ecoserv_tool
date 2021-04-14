@@ -5,8 +5,8 @@
 \title{Access to Nature Capacity Model}
 \usage{
 capacity_access_nature(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   prow,
   crow,
   lnr,

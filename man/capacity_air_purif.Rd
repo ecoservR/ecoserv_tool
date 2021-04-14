@@ -5,8 +5,8 @@
 \title{Air Purification Capacity Model}
 \usage{
 capacity_air_purif(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   res = 5,
   short = 20,
   local = 100,

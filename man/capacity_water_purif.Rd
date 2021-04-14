@@ -5,8 +5,8 @@
 \title{Water Purification Capacity Model}
 \usage{
 capacity_water_purif(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   DTM = NULL,
   spr = NULL,
   res = 5,

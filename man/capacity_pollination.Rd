@@ -5,8 +5,8 @@
 \title{Pollination Capacity Model}
 \usage{
 capacity_pollination(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   res = 5,
   dist = 20,
   elev = NULL,
