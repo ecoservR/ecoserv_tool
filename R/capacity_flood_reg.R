@@ -5,9 +5,9 @@
 ### 09 Dec 2020                         ###
 ###########################################
 
-#' Water Purification Capacity Model
+#' Flood Risk Mitigation Capacity Model
 #'
-#' Runs the air purification ecosystem service model, generating capacity scores based on the ability of the landscape to slow down the flow of water and catch pollutants. Indicators for this model are vegetation roughness and terrain slope (and optionally soil permeability: surface percent runoff data can be obtained from the Hydrology of Soil Types (HOST) dataset.)
+#' Runs the flood risk mitigation ecosystem service model, generating capacity scores based on the ability of the landscape to slow down the flow of water. Indicators for this model are vegetation roughness and terrain slope (and optionally soil permeability: surface percent runoff data can be obtained from the Hydrology of Soil Types (HOST) dataset.)
 
 #' @param x A basemap, in a list of sf tiles or as one sf object. Must have attribute HabCode_B.
 #' @param studyArea The boundaries of the site, as one sf object. The final raster will be masked to this shape. For best results this shape should be smaller than the basemap (which should be buffered by typically 300 m - 1km to avoid edge effects).
@@ -21,7 +21,7 @@
 #' @return Two rasters with capacity scores: one with raw scores (arbitrary units), and one rescaled 0-100 (where 100 is maximum capacity for the area).
 #' @export
 #'
-capacity_water_purif <- function(x = parent.frame()$mm,
+capacity_flood_reg <- function(x = parent.frame()$mm,
                                  studyArea = parent.frame()$studyArea,
                                  DTM = NULL, spr = NULL,
                                  res = 5,
@@ -276,7 +276,7 @@ capacity_water_purif <- function(x = parent.frame()$mm,
    message("Saving final and standardised scores.")
    final <- raster::writeRaster(
       raster::mask(water_score, studyArea),
-      filename = file.path(save, paste(projectLog$title, runtitle, "water_purification_capacity.tif", sep="_")),
+      filename = file.path(save, paste(projectLog$title, runtitle, "flood_mitigation_capacity.tif", sep="_")),
       overwrite = TRUE  # perhaps not desirable but for now prevents error messages
    )
 
@@ -286,7 +286,7 @@ capacity_water_purif <- function(x = parent.frame()$mm,
 
    final_scaled <- raster::writeRaster(
       final/maxval*100,  # rescale from 0-100
-      filename = file.path(save, paste(projectLog$title, runtitle, "water_purification_capacity_rescaled.tif", sep="_")),
+      filename = file.path(save, paste(projectLog$title, runtitle, "flood_mitigation_capacity_rescaled.tif", sep="_")),
       overwrite = TRUE  # perhaps not desirable but for now prevents error messages
    )
 
