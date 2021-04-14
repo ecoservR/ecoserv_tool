@@ -225,5 +225,105 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 }
 
 
+#' Retrieve Final Basemap
+#'
+#' This function loads the final basemap saved for a project and prepares it in order to run ecosystem service models.
+
+#' @param folder Folder in which the final version of the basemap is saved (by default the "final" subfolder in the project's folder)
+#' @param filename A character string to match to file names in the folder and identify the file to load. Default to "final.RDS"
+
+#' @export
+get_final_map <- function(folder = NULL, filename = "final.RDS"){
+
+   projectLog <- getProjectLog()  # load project log from working directory
+
+   # if user specified a different folder to look into (e.g. for intervention map) we will be looking for a file in there, otherwise we set the folder to the "final" subfolder
+
+   if (is.null(folder)){
+      folder <- file.path(getwd(), "final") # get the user's working directory
+   }
+
+   ## Identify the final mm object
+
+   filelist <- list.files(folder,
+                          pattern = filename,
+                          full.names = TRUE, recursive = TRUE)
+   times <- file.info(filelist)$mtime
+
+   latest <- filelist[which.max(times)]  # subset to latest
+
+   if (length(filelist) == 0) stop("Cannot find your final basemap. Check that a file name containing \"", filename, "\" exists in ", folder , " or set folder and filename arguments as appropriate.")
+
+   # Read in the final file
+    mm <- readRDS(latest)
+
+    message("Basemap imported. Importing study area...")
+
+
+   ## Load the study area
+
+    studypath <- projectLog$df[projectLog$df$dataset == "studyArea", ][["path"]]
+
+    ### Import the study area outline (specifying OSGB as crs)
+
+    studyArea <- try(loadSpatial(studypath,
+                                 layer = NULL,
+                                 filetype = guessFiletype(studypath)) %>%
+                        do.call(rbind, .))
+
+    if (inherits(studyArea, "try-error")) stop("Could not import study area from ", studypath) else message("Study area imported.")
+
+    studyArea <- suppressWarnings({
+       checkcrs(studyArea, 27700) %>%   # check that CRS is Brit National Grid, and transform if not
+          sf::st_set_crs(., 27700) %>%  # set the crs manually to get rid of GDAL errors with init string format
+          sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf()
+    })
+
+   ## Check mm polygons and bind in one object
+
+   mm <- checkgeometry(mm, "POLYGON")
+   mm <- do.call(rbind, mm)
+
+   ## Examine MM attributes and make sure what we need is there
+
+   # absolutely required attribute
+   if (!c("HabCode_B") %in% names(mm)) stop("Basemap must contain attribute HabCode_B")
+
+   # potentially required attributes
+
+   accessnat <- c("Group", "GI", "GIpublic")
+
+   if (isFALSE(all(accessnat %in% names(mm)))){
+      message("Warning: you will not be able to run the Access to Nature capacity model without the attribute(s) ",
+              paste0(accessnat[!accessnat %in% names(mm)], collapse = " & ")
+              )
+   }
+
+   demandattr <- c("housePop", "health", "riskgroup")
+
+   if (isFALSE(all(demandattr %in% names(mm)))){
+      message("Warning: you will not be able to run demand models without the attribute(s) ",
+              paste0(demandattr[!demandattr %in% names(mm)], collapse = " & ")
+      )
+   }
+
+
+   ### Keep only required attributes and drop rest from mm for faster processing
+
+   mm <- mm[,intersect(c("HabCode_B", accessnat, demandattr), names(mm))]
+
+   message("Ready to map ecosystem services.")
+
+   return({
+      ## returns the objects in the global environment
+      invisible({
+         mm <<- mm
+         studyArea <<- studyArea
+         projectLog <<- projectLog
+      })
+   })
+
+
+}
 
 
