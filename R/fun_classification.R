@@ -255,15 +255,22 @@ classif_mastermap <- function(x, params){
          # Classifying coastal
          Group == "Tidal Water" & Term != "Foreshore" ~ "G26",  # revise when testing coastal
 
-         Term %in% c("Foreshore,Mud",
-                                "Foreshore,Sand",
-                                "Mud") ~ "H11",
+         Term %in% c(permute("Sand","Mud"),
+                     permute("Mud","Sand"),
+                     permute("Foreshore","Mud"),
+                     permute("Foreshore","Sand"),
+                     "Mud",
+                     "Sand") ~ "H11",
 
-         Term %in% c("Foreshore,Shingle",
-                                "Foreshore,Sand,Shingle",
-                                "Foreshore,Shingle,Sand",
-                                "Sand") ~ "H12",
 
+         # how do we know whether they are intertidal or above tide line?
+         Term %in% c(permute("Sand","Shingle"),
+                     permute("Foreshore","Shingle"),
+                     permute("Foreshore","Sand","Shingle"),
+                     "Shingle") ~ "H12",
+
+         Term %in% c(permute("Sand", "Rough Grassland")) ~ "H65",
+         # probably sand dunes, which will get picked up by PHI
 
          Term %in% c("Foreshore,Rock",
                                 "Rock,Foreshore",
@@ -435,7 +442,8 @@ classif_phi <- function(x){
 
       ## Floodplain or grazing marsh
       grepl("Floodplain", phi, ignore.case = TRUE) & HabCode_B == "B4/J11" ~ "B4f",
-      grepl("Floodplain", phi, ignore.case = TRUE) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B4f",
+      grepl("Floodplain", phi, ignore.case = TRUE) & grepl("B", HabCode_B) ~ "B4f",
+      grepl("Floodplain", phi, ignore.case = TRUE) & grepl("A", HabCode_B) ~ "B4f",
 
       phi == "Purple moor grass and rush pastures"  & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B5",
       phi == "Purple moor grass and rush pastures"  & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B5",
@@ -463,18 +471,22 @@ classif_phi <- function(x){
 
       phi == "Saline lagoons" & grepl("G", HabCode_B) ~ "G16",
 
-      phi == "Coastal sand dunes" & HabCode_B == "H1u" ~ "H6u",
+      phi == "Coastal sand dunes" & grepl("Grassland", Term, ignore.case = TRUE) ~ "H65",
+      phi == "Coastal sand dunes" & grepl("Heath", Term, ignore.case = TRUE) ~ "H66",
+      phi == "Coastal sand dunes" & grepl("Scrub", Term, ignore.case = TRUE) ~ "H67",
+      phi == "Coastal sand dunes" & grepl("H", HabCode_B) ~ "H6u",
       phi == "Coastal sand dunes" & grepl("B", HabCode_B) ~ "H6u",
       phi == "Coastal sand dunes" & grepl("D", HabCode_B) ~ "H6u",
 
       phi == "Coastal vegetated shingle" & grepl("H", HabCode_B) ~ "H3/H5",
       phi == "Coastal vegetated shingle" & grepl("B", HabCode_B) ~ "H3/H5",
       phi == "Coastal vegetated shingle" & grepl("D", HabCode_B) ~ "H3/H5",
+      phi == "Coastal vegetated shingle" & grepl("A", HabCode_B) ~ "H3/H5",
 
       phi == "Mudflats" & grepl("B", HabCode_B) ~ "H11",
       phi == "Mudflats" & grepl("H", HabCode_B) ~ "H11",
 
-      phi == "Coastal saltmarsh" & HabCode_B == "H1u" ~ "H2u",
+      phi == "Coastal saltmarsh" & grepl("H", HabCode_B) ~ "H2u",
       phi == "Coastal saltmarsh" & grepl("B", HabCode_B) ~ "H2u",
       phi == "Coastal saltmarsh" & grepl("D", HabCode_B) ~ "H2u",
 
@@ -657,6 +669,22 @@ classif_agri <- function(x){
 
                             TRUE ~ HabCode_B
                          ))
+      } else if (is.null(x$corine) & !is.null(x$crome)){
+   # If only CROME is used, we try to refine the unknown grasslands
+
+         x <- dplyr::mutate(x,
+                            HabCode_B = dplyr::case_when(
+
+            # pastures
+            HabCode_B %in% c("B4/J11", "B") & crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "B4/Bu",
+
+            # crops
+            HabCode_B %in% c("B4/J11", "B") & !crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "J11",
+
+
+            TRUE ~ HabCode_B
+                            ))
+
    }
 
 
