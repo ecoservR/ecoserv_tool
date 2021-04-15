@@ -90,7 +90,7 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
 
    # Now we know there is at least one raster in the folder; list them
 
-   dtm <- list.files(DTM, # folder with DTM tiles
+   dtm <- list.files(dtm, # folder with DTM tiles
                      pattern = paste0(c('.asc$', '.tif$'), collapse ="|"),
                      all.files=TRUE, full.names=TRUE,
                      recursive = TRUE)
