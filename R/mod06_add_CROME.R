@@ -155,6 +155,7 @@ crome$lucode <- dplyr::recode(crome$lucode, !!!crome_lookup, .default = as.facto
    return({
       invisible({
          mm <<- mm
+         projectLog <<- projectLog
       })
    })
 

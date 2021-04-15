@@ -144,6 +144,7 @@ if (length(dtm) == 1){
       return({
          invisible({
             mm <<- mm
+            projectLog <<- projectLog
          })
       })
 

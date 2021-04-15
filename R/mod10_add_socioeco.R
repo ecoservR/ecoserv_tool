@@ -196,6 +196,7 @@ rm(census, census_tiles, centro, houses, vals, i)
    return({
       invisible({
          mm <<- mm
+         projectLog <<- projectLog
       })
    })
 

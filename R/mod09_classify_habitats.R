@@ -191,6 +191,7 @@ if ("phi" %in% attributes){
    return({
       invisible({
          mm <<- mm
+         projectLog <<- projectLog
       })
    })
 

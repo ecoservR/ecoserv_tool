@@ -142,6 +142,7 @@ add_PHI <- function(mm = parent.frame()$mm,
    return({
       invisible({
          mm <<- mm
+         projectLog <<- projectLog
       })
    })
 

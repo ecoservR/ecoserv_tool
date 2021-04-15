@@ -272,6 +272,7 @@ add_corine <- function(mm = parent.frame()$mm,
    return({
       invisible({
          mm <<- mm
+         projectLog <<- projectLog
       })
    })
 }
