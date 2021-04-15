@@ -167,12 +167,18 @@ if ("phi" %in% attributes){
 
    projectLog$last_success <- "MM_classified.RDS"
 
+   timeB <- Sys.time() # stop time
+
+   # add performance to log
+   projectLog$performance[["classify_map"]] <- as.numeric(difftime(
+      timeB, timeA, units="mins"
+   ))
+
    updateProjectLog(projectLog) # save revised log
 
    # and delete contents of scratch folder
    cleanUp(scratch_path)
 
-   timeB <- Sys.time() # stop time
 
    message(paste0("Finished classifying map into ", length(unique(summary)), " habitat types. \n
                   Process took ",

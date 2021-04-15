@@ -176,9 +176,15 @@ rm(census, census_tiles, centro, houses, vals, i)
 
    projectLog$last_success <- "MM_classified_pop.RDS"
 
+   timeB <- Sys.time() # stop time
+
+   # add performance to log
+   projectLog$performance[["add_socioeco"]] <- as.numeric(difftime(
+      timeB, timeA, units="mins"
+   ))
+
    updateProjectLog(projectLog) # save revised log
 
-   timeB <- Sys.time() # stop time
 
    message(paste0("Finished adding socio-economic data. Process took ",
                   round(difftime(timeB, timeA, units = "mins"), digits = 1),

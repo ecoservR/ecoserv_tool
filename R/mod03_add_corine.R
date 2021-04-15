@@ -248,12 +248,19 @@ add_corine <- function(mm = parent.frame()$mm,
 
       projectLog$last_success <- "MM_03.RDS"
 
+
+      timeB <- Sys.time() # stop time
+
+      # add performance to log
+      projectLog$performance[["add_corine"]] <- as.numeric(difftime(
+         timeB, timeA, units="mins"
+      ))
+
       updateProjectLog(projectLog) # save revised log
 
       # and delete contents of scratch folder
       cleanUp(scratch_path)
 
-      timeB <- Sys.time() # stop time
 
       message(paste0("Finished updating with Corine data. Process took ",
                      round(difftime(timeB, timeA, units = "mins"), digits = 1),

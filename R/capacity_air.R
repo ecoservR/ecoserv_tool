@@ -38,6 +38,8 @@ capacity_air_purif <- function(x = parent.frame()$mm,
                          save = NULL
 ){
 
+   timeA <- Sys.time() # start time
+
    # Create output directory automatically if doesn't already exist
    if (is.null(save)){
 
@@ -184,12 +186,31 @@ capacity_air_purif <- function(x = parent.frame()$mm,
       overwrite = TRUE  # perhaps not desirable but for now prevents error messages
    )
 
+
+   timeB <- Sys.time() # stop time
+
+   # write performance to log
+   projectLog$performance[["cap_air"]] <- as.numeric(difftime(
+      timeB, timeA, units="mins"
+   ))
+
+
+   updateProjectLog(projectLog) # save revised log
+
+
    # Delete all the stuff we don't need anymore
 
    on.exit({
       rm(r, final, final_scaled, w_local, w_short, maxval)
       cleanUp(scratch)
-      message("Process finished. Please check output folder for your maps.")
+      message("Air purification capacity model finished. Process took ", round(difftime(timeB, timeA, units = "mins"), digits = 1), " minutes. Please check output folder for your maps.")
+   })
+
+   return({
+      ## returns the objects in the global environment
+      invisible({
+         projectLog <<- projectLog
+      })
    })
 
 

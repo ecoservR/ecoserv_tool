@@ -129,12 +129,18 @@ crome$lucode <- dplyr::recode(crome$lucode, !!!crome_lookup, .default = as.facto
 
    projectLog$last_success <- "MM_06.RDS"
 
+   timeB <- Sys.time() # stop time
+
+   # add performance to log
+   projectLog$performance[["add_CROME"]] <- as.numeric(difftime(
+      timeB, timeA, units="mins"
+   ))
+
    updateProjectLog(projectLog) # save revised log
 
    # and delete contents of scratch folder
    cleanUp(scratch_path)
 
-   timeB <- Sys.time() # stop time
 
    message(paste0("Finished updating with Crop Map of England data. Process took ",
                      round(difftime(timeB, timeA, units = "mins"), digits = 1),

@@ -286,13 +286,48 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    projectLog$last_success <- "MM_01.RDS"
 
-   updateProjectLog(projectLog) # save revised log
+
+   ### Create a "performance" list in the project log which saves the time taken
+   ## for each module
+
+   projectLog$performance <- vector(mode = "list", length = 17)
+   names(projectLog$performance) <- c(
+      "prep_mastermap",
+      "add_greenspace",
+      "add_corine",
+      "add_NFI",
+      "add_PHI",
+      "add_CROME",
+      "add_DTM",
+      "add_hedges",
+      "classify_map",
+      "add_socioeco",
+      "cap_carbon",
+      "cap_air",
+      "cap_flood",
+      "cap_pollin",
+      "cap_noise",
+      "cap_clim",
+      "cap_access"
+   )
 
    timeB <- Sys.time() # stop time
+
+   projectLog$performance[["prep_mastermap"]] <- as.numeric(difftime(
+      timeB, timeA, units="mins"
+   ))
+
+
+   updateProjectLog(projectLog) # save revised log
+
+
 
    message(paste0("MasterMap preparation finished. Process took ",
                   round(difftime(timeB, timeA, units = "mins"), digits = 1), " minutes. Ready for
                   processing."))
+
+   on.exit(invisible(gc())) # garbage collection - return some memory to computer
+
    return({
       ## returns the objects in the global environment
       invisible({
@@ -301,6 +336,6 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
       })
    })
 
-   on.exit(invisible(gc())) # garbage collection - return some memory to computer
+
 
 }

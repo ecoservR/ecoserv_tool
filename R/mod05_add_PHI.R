@@ -116,6 +116,13 @@ add_PHI <- function(mm = parent.frame()$mm,
 
       projectLog$last_success <- "MM_05.RDS"
 
+      timeB <- Sys.time() # stop time
+
+      # add performance to log
+      projectLog$performance[["add_PHI"]] <- as.numeric(difftime(
+         timeB, timeA, units="mins"
+      ))
+
       updateProjectLog(projectLog) # save revised log
 
       # remove objects
@@ -123,8 +130,6 @@ add_PHI <- function(mm = parent.frame()$mm,
 
       # and delete contents of scratch folder
       cleanUp(scratch_path)
-
-      timeB <- Sys.time() # stop time
 
       message(paste0("Finished updating with Priority Habitat Inventory data. Process took ",
                      round(difftime(timeB, timeA, units = "mins"), digits = 1),

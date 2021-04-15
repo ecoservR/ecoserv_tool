@@ -118,12 +118,18 @@ if (length(dtm) == 1){
 
       projectLog$last_success <- "MM_07.RDS"
 
+      timeB <- Sys.time() # stop time
+
+      # add performance to log
+      projectLog$performance[["add_DTM"]] <- as.numeric(difftime(
+         timeB, timeA, units="mins"
+      ))
+
       updateProjectLog(projectLog) # save revised log
 
       # and delete contents of scratch folder
       cleanUp(scratch_path)
 
-      timeB <- Sys.time() # stop time
 
       message(paste0("Finished updating with elevation data. Process took ",
                      round(difftime(timeB, timeA, units = "mins"), digits = 1),

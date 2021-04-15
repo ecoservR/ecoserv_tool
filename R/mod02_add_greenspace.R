@@ -307,13 +307,20 @@ add_greenspace <- function(mm = parent.frame()$mm,
 
    projectLog$last_success <- "MM_02.RDS"
 
+   timeB <- Sys.time() # stop time
+
+   # add performance to log
+   projectLog$performance[["add_greenspace"]] <- as.numeric(difftime(
+      timeB, timeA, units="mins"
+   ))
+
    updateProjectLog(projectLog) # save revised log
 
 
    # and delete scratch folder
    cleanUp(scratch_path)
 
-   timeB <- Sys.time() # stop time
+
 
    message(paste0("MasterMap updated with Greenspace and saved. Process took ",
                   round(difftime(timeB, timeA, units = "mins"), digits = 1),

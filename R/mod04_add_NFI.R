@@ -117,12 +117,17 @@ add_NFI <- function(mm = parent.frame()$mm,
 
       projectLog$last_success <- "MM_04.RDS"
 
+      timeB <- Sys.time() # stop time
+
+      # add performance to log
+      projectLog$performance[["add_NFI"]] <- as.numeric(difftime(
+         timeB, timeA, units="mins"
+      ))
+
       updateProjectLog(projectLog) # save revised log
 
       # and delete contents of scratch folder
       cleanUp(scratch_path)
-
-      timeB <- Sys.time() # stop time
 
       message(paste0("Finished updating with National Forest Inventory data. Process took ",
                      round(difftime(timeB, timeA, units = "mins"), digits = 1),
