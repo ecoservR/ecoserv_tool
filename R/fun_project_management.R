@@ -281,6 +281,7 @@ get_final_map <- function(folder = NULL, filename = "final.RDS"){
 
    ## Check mm polygons and bind in one object
 
+    message("Validating basemap geometry...")
    mm <- checkgeometry(mm, "POLYGON")
    mm <- do.call(rbind, mm)
 
