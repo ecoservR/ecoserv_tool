@@ -221,7 +221,7 @@ preview_basemap <- function(mm = parent.frame()$mm,
       centro <- sf::st_buffer(centro, sample/2)
 
       # create square from bounding box
-      square <- sf::st_bbox(centro) %>% sf::st_as_sfc()
+      square <- sf::st_bbox(centro) %>% sf::st_as_sfc() %>% sf::st_make_valid()
 
 
       # identify which mm tiles intersect
@@ -234,7 +234,7 @@ preview_basemap <- function(mm = parent.frame()$mm,
 
 
       x <- mm[index]
-      x <- do.call(rbind, x)
+      x <- do.call(rbind, x) %>% sf::st_make_valid()
       x <- suppressWarnings(sf::st_intersection(x, square))
 
 
