@@ -221,7 +221,7 @@ preview_basemap <- function(mm = parent.frame()$mm,
       centro <- sf::st_buffer(centro, sample/2)
 
       # create square from bounding box
-      square <- sf::st_bbox(centro) %>% st_as_sfc()
+      square <- sf::st_bbox(centro) %>% sf::st_as_sfc()
 
 
       # identify which mm tiles intersect
@@ -230,7 +230,7 @@ preview_basemap <- function(mm = parent.frame()$mm,
 
       SAgrid <- do.call(rbind, SAgrid)  # unlist the grid squares
 
-      index <- index[lengths(st_intersects(SAgrid, square)) >0]  # extract tile names when tile intersects the sampling area
+      index <- index[lengths(sf::st_intersects(SAgrid, square)) >0]  # extract tile names when tile intersects the sampling area
 
 
       x <- mm[index]
@@ -247,7 +247,7 @@ preview_basemap <- function(mm = parent.frame()$mm,
 
    x <- checkgeometry(x, "POLYGON")
 
-  st_write(x,
+  sf::st_write(x,
            dsn = file.path(projectLog$projpath, paste0(projectLog$title,"_basemap_preview.gpkg")),
            append = FALSE)
 
