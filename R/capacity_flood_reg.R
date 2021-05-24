@@ -119,6 +119,7 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
 
       # set up the filename as a property
       dtm$filename <- file.path(dtmpath, paste(projectLog$title, "_merged_DTM.tif", sep = ""))
+      dtm$overwrite <- TRUE
       dtm <- do.call(raster::merge, dtm)
       message("Merged DTM saved to: ", dtmpath, " .You can use it to speed up future runs of the model.")
    }
