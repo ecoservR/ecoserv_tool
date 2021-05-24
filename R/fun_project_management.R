@@ -189,7 +189,6 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 
    mmattr <- allattr[allattr %in% mmattr]  # keep only attributes contained
 
-
    included <- ds_names[!is.na(projectLog$df$path) & ds_names %in% names(mmattr)]
 
    toadd <- ds_names[!is.na(projectLog$df$path) & !ds_names %in% names(mmattr) & ds_names != "your study area"]
@@ -200,8 +199,14 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
    toadd <- setdiff(toadd, projectLog$ignored)  # exclude them from list of data to add
    }
 
+   if (!is.null(projectLog$performance$add_hedges)){
+      toadd <- c(toadd, projectLog$df[projectLog$df$dataset == "hedgerows", ]$prettynames)
+   }
+
+
    if (length(toadd) > 0){
-   message(paste0("Your current basemap includes data from: \n",
+   message(paste0("Your current basemap (",
+   ifelse(isFALSE(trustlog), basename(latest), basename(success)), ") includes data from: \n",
                   paste0(included, collapse = " \n"),
                   ". \n\n Now you can add: \n",
                   paste0(toadd, collapse = "\n"),
