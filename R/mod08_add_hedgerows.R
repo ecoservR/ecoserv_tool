@@ -82,7 +82,8 @@ add_hedgerows <- function(mm = parent.frame()$mm,
          index <- (mm[[i]][["Make"]] == "Manmade" | mm[[i]][["Theme"]] == "Water")
 
          if (any(index)){
-            hedge <- rmapshaper::ms_erase(hedge, mm[[i]][index,]) # mask
+            hedge <- rmapshaper::ms_erase(hedge, mm[[i]][index,]) %>%  # mask
+               checkgeometry(.)
          }
       }
 
@@ -106,7 +107,8 @@ add_hedgerows <- function(mm = parent.frame()$mm,
             indexh <- which(lengths(sf::st_intersects(hedge, mm[[i]][indexmm,]))>0)
 
             # create a subset with the revised polygons
-            mm_erased <- rmapshaper::ms_erase(mm[[i]][indexmm,], hedge[indexh,])
+            mm_erased <- rmapshaper::ms_erase(mm[[i]][indexmm,], hedge[indexh,]) %>%
+               checkgeometry(.)
 
             # remove the original polys from df
             mm[[i]] <- mm[[i]][-indexmm,]
