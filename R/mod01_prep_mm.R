@@ -234,6 +234,11 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    mm <- removeDuplicPoly(mm, "TOID")
 
 
+   ## the duplicate check may dwindle a tile to nothing (this fixes a bug)
+   ## so we check and remove empty tiles again
+   mm <- mm[sapply(mm, function(x) (nrow(x) > 0) == TRUE)]
+
+
    ## Clip to study area
    message("Clipping to study area...")
 
