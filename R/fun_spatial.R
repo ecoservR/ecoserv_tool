@@ -142,15 +142,15 @@ calculateDistances <- function(r){
 
    # convert to spatstat point object with marks (habitat or no)
 
-   points <- spatstat::as.ppp(raster::rasterToPoints(r, spatial = TRUE))   # a ppp objects with marks 8888 (non) or 1 (habitat)
-   plist <- spatstat::split.ppp(points, f = as.factor(points$marks)) # split them
+   points <- spatstat.geom::as.ppp(raster::rasterToPoints(r, spatial = TRUE))   # a ppp objects with marks 8888 (non) or 1 (habitat)
+   plist <- spatstat.geom::split.ppp(points, f = as.factor(points$marks)) # split them
    pointsHab <- plist[[1]]  # the habitat points
    pointsNon <- plist[[2]]  # the 8888 (non habitat) points
 
    rm(points, plist) # remove unnecessary objects
 
    # Find the nearest neighbour of type Y (habitat patch) for each point X (non habitat cell)
-   distances <- spatstat::nncross(pointsNon, pointsHab, k = 1, what = "dist")
+   distances <- spatstat.geom::nncross(pointsNon, pointsHab, k = 1, what = "dist")
 
 
    ### Update the demand raster with the distances ----
