@@ -179,6 +179,10 @@ add_hedgerows <- function(mm = parent.frame()$mm,
       suppressWarnings(rm(grid, indexmm, indexh, i, mmcols, hedge, tile) )
 
 
+      # Validate geometries one last time
+
+      mm <- checkgeometry(mm, "POLYGON")
+
       # SAVE UPDATED MASTER MAP ---------------------------------------------------------------------
 
       saveRDS(mm, file.path(output_temp, paste0(title, "_MM_08.RDS")))
