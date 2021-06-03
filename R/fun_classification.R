@@ -37,7 +37,6 @@ permute <- function(..., sep = ","){
 #' @return The basemap sf object with a new attribute HabCode_B
 #' @export
 
-
 classif_mastermap <- function(x, params){
 
    x <- x %>% dplyr::mutate(
@@ -401,8 +400,6 @@ classif_mastermap <- function(x, params){
 #' @return The basemap sf object with updated attribute HabCode_B
 #' @export
 
-
-
 classif_phi <- function(x){
 
    ## Do we need to add a OR is.na(HabCode_B) to each statement? Test on subset
@@ -624,7 +621,6 @@ classif_green <- function(x){
 #' @return The basemap sf object with updated attribute HabCode_B
 #' @export
 
-
 classif_agri <- function(x){
 
    # We first try to classify based on both corine and crome if present
@@ -717,7 +713,6 @@ classif_agri <- function(x){
 #' @param x A basemap sf object
 #' @return The basemap sf object with updated attribute HabCode_B
 #' @export
-
 
 classif_area <- function(x, params){
    x <- x %>% dplyr::mutate(
@@ -813,6 +808,8 @@ x <- dplyr::mutate(x,
                        "Playing Field", "Institutional Grounds",
                        "Allotments Or Community Growing Spaces") ~ "Restricted"
           ))
+
+return(x)
 }
 
 

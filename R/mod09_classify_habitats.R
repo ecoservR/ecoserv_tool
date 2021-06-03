@@ -56,9 +56,11 @@ classify_map <- function(mm = parent.frame()$mm,
 
    # Preparation -------------------------------------------------------------
 
+   mm <- checkgeometry(mm, "POLYGON")
+
    # Make sure we have single-part polygons and calculate area afresh
 
-   mm <- lapply(mm, function(x) checkgeometry(x, "POLYGON") %>%
+   mm <- lapply(mm, function(x) x %>%
                    dplyr::mutate(
                       shp_area = as.numeric(sf::st_area(x)),
                       shp_length = as.numeric(lwgeom::st_perimeter(x))) %>%
