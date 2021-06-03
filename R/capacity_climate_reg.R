@@ -119,7 +119,7 @@ capacity_climate_reg <- function(x = parent.frame()$mm,
       sf::st_cast(to  ="MULTIPOLYGON") %>%
       sf::st_cast(to = "POLYGON", warn = FALSE) %>%   # multi to single polygon
       sf::st_sf() %>%                   # make sure it's in right format
-      dplyr::mutate(area = as.numeric(st_area(.)))     # calculate shape area
+      dplyr::mutate(area = as.numeric(sf::st_area(.)))     # calculate shape area
 
 
    ##  Smaller patches have less of an influence on their neighbourhood than large patches,
@@ -128,8 +128,11 @@ capacity_climate_reg <- function(x = parent.frame()$mm,
 
    message("Calculating area of influence around vegetated patches")
    b1 <- dplyr::filter(x, area <= 20000) %>% sf::st_buffer(20) %>% sf::st_union() %>% sf::st_sf()
+
    b2 <- dplyr::filter(x, dplyr::between(area, 20000, 50000)) %>% sf::st_buffer(40) %>% sf::st_union() %>% sf::st_sf()
+
    b3 <- dplyr::filter(x, dplyr::between(area, 50000, 100000)) %>% sf::st_buffer(80) %>% sf::st_union() %>% sf::st_sf()
+
    b4 <- dplyr::filter(x, area > 100000) %>% sf::st_buffer(100) %>% sf::st_union() %>% sf::st_sf()
 
    # Bind and dissolve those buffers to create the mask
