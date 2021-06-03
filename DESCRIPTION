@@ -14,7 +14,6 @@ Authors@R: c(
 Description: EcoservR is a toolkit for generating an environmental baseline (in the UK) using widely available national datasets.
     Seven ecosystem services can currently be mapped: carbon storage, air purification, water purification,
     pollination, climate regulation, noise regulation, and access to nature.
-    Use four spaces when indenting paragraphs within the Description.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
@@ -25,6 +24,7 @@ Imports:
     rgeos (>= 0.4.2),
     lwgeom (>= 0.2.4),
     raster (>= 3.3.10),
+    rasterVis(>= 0.50.2),
     fasterize (>= 1.0.1),
     tabularaster (>= 0.6.0),
     landscapemetrics (>= 1.4.3),
@@ -33,12 +33,13 @@ Imports:
     stars (>= 0.4.3),
     maptools (>= 0.9.4),
     gdistance (>= 1.3.6),
-    data.table(>= 1.12.8),
+    data.table (>= 1.12.8),
     shiny (>= 1.5.0),
     shinyjs (>= 1.1),
     shinycssloaders (>= 0.2.0),
     shinyFiles (>= 0.8.0),
     shinyalert (>= 1.0),
+    tibble (>= 3.1.1),
     kableExtra (>= 1.3.1),
     magrittr,
     methods,
