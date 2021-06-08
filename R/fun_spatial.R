@@ -137,7 +137,7 @@ functionalMask <- function(x, local = 0, res, proportion = 0.10, threshold){
 calculateDistances <- function(r){
    # where r is the raster, processed to have source coded as 1 and target cells as 8888
 
-   require(spatstat)
+   require(spatstat.geom)
    require(maptools)
 
    # convert to spatstat point object with marks (habitat or no)
