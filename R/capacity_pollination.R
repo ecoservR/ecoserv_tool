@@ -173,12 +173,10 @@ capacity_pollination <- function(x = parent.frame()$mm,
                  "Heathland",
                  "Scrub")
 
-   core <- dplyr::filter(x, HabCode_B %in% corehabs | HabBroad %in% corehabs) %>%
-      dplyr::filter(HabCode_B != "J56") # remove private gardens as probably not great for pollinators
-
+   core <- dplyr::filter(x, HabCode_B %in% corehabs | HabBroad %in% corehabs)
 
    # Create buffer around core with distance specified
-   corebuffer <- sf::st_buffer(core, dist)
+   corebuffer <- sf::st_buffer(core, dist) %>% sf::st_make_valid()
 
    ### Create edge habitat layer -----
    message("Creating layer of edge habitats")
@@ -190,7 +188,8 @@ capacity_pollination <- function(x = parent.frame()$mm,
    edge <- dplyr::filter(x, HabBroad %in% edgehabs)
 
    # use buffer around core habitats to clip edge habitats used by pollinators
-   edgeclip <- sf::st_intersection(edge, corebuffer)
+   edgeclip <- sf::st_intersection(edge, corebuffer) %>% sf::st_make_valid()
+   edgeclip <- checkgeometry(edgeclip, "POLYGON")
 
 
    ### Merge core and edge habitats -----
