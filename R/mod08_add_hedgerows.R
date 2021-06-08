@@ -44,6 +44,8 @@ add_hedgerows <- function(mm = parent.frame()$mm,
       hedge <- loadSpatial(hedgepath,
                            filetype = hedgetype)  # using the loading into list function in case there are many shp
 
+      hedge <- lapply(hedge, function(x) sf::st_zm(x, drop = TRUE)) # remove Z dimension if present
+
       hedge <- do.call(rbind, hedge) %>% sf::st_as_sf()  # putting back into one single sf object
 
 
