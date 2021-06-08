@@ -52,27 +52,6 @@ loadRasters <- function(path, type, pattern = NULL) {
 }
 
 
-#' Plotify Rasters
-#'
-#' Turns rasters into a plottable dataframe for use with ggplot2
-
-#' @param r A raster or RasterStack object
-#' @return A RasterStack object, with names corresponding to the service
-#' @export
-
-plotifyRasters <- function(r){
-   # where r is one raster or a raster stack
-
-   plotified <- vector("list", dim(r)[[3]]) # empty list
-
-   for (i in 1:length(plotified)){
-      plotified[[i]] <- rasterVis::gplot(r[[i]])
-   }
-
-   names(plotified) <- names(r)
-   return(plotified)
-}
-
 #' Rescale Rasters
 #'
 #' Rasters from different model runs (e.g. pre and post intervention scenario) may have different score ranges. It is important to rescale them using a common maximum so we can measure the change.
