@@ -42,16 +42,19 @@ add_hedgerows <- function(mm = parent.frame()$mm,
       # Import hedge data
 
       hedge <- loadSpatial(hedgepath,
-                           filetype = hedgetype)  # using the loading into list function in case there are many shp
+                           filetype = hedgetype)  # using the loading into list function in case there are many layers
 
-      hedge <- lapply(hedge, function(x) sf::st_zm(x, drop = TRUE)) # remove Z dimension if present
+      # Tidy up the files so we can combine them together
+
+      hedge <- lapply(hedge, function(x) sf::st_zm(x, drop = TRUE) %>% # remove Z dimension if present
+                         checkgeometry(., studyAreaBuffer) %>% # check proj
+                         sf::st_geometry() %>% # drop attributes
+                         sf::st_as_sf()) # make sure format is sf df
 
       hedge <- do.call(rbind, hedge) %>% sf::st_as_sf()  # putting back into one single sf object
 
 
       # DATA PREP -----------------------------------------------------------------------------------
-
-      hedge <- checkcrs(hedge, studyAreaBuffer)
 
       # Clip to study area
       hedge <- suppressWarnings(sf::st_intersection(hedge, sf::st_geometry(studyAreaBuffer)))
