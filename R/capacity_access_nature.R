@@ -80,7 +80,11 @@ capacity_access_nature <- function(x = parent.frame()$mm,
 
    x <- merge(x, hab_lookup, by.x = "HabCode_B", by.y = "Ph1code", all.x = TRUE)
 
-   x <- x[c("HabCode_B", "Group", "GI", "GIpublic", "Naturalness")] # keep only required columns
+   # removed dependencies on group and GI because intervention maps don't have updated values
+   x <- x[c("HabCode_B",
+            #"Group",
+            #"GI",
+            "GIpublic", "Naturalness")] # keep only required columns
 
 
    ### Create raster template with same properties as mastermap -----
@@ -107,7 +111,7 @@ capacity_access_nature <- function(x = parent.frame()$mm,
    nnr <- importDesignatedAreas(path = nnr, studyArea = SAbuffer, dataset = "NNR")
 
 
-   ### Process and merge the access layers
+   ### Process and merge the access layers ---
 
    # PROW is buffered and converted to polygon, others converted to be all same type
 
@@ -145,6 +149,20 @@ capacity_access_nature <- function(x = parent.frame()$mm,
    rm(prow, crow, lnr, nnr)
 
 
+   ### Also extract paths from basemap
+   message("Extracting public pavements from the basemap")
+
+   sidewalk <- dplyr::filter(x, HabCode_B == "J52") %>%   # pavements are extracted
+      sf::st_buffer(20) %>%  # buffer applied
+      sf::st_union() %>%  # union to remove overlap
+      sf::st_as_sf()  # put back in sf format, with only geometry column
+
+   sidewalk <- checkgeometry(sidewalk, "POLYGON")
+
+   ## Ideally would also use VectorMap to remove roadside along major roads....
+
+
+
    message("Extracting public greenspace from the basemap")
    ### Create the rest of the access objects from basemap
 
@@ -153,12 +171,8 @@ capacity_access_nature <- function(x = parent.frame()$mm,
       sf::st_as_sf()
    GI_access <- checkgeometry(GI_access, "POLYGON")
 
-   sidewalk <- dplyr::filter(x, Group == "Roadside" & HabCode_B == "J52") %>%   # pavements are extracted
-      sf::st_buffer(20) %>%  # buffer applied
-      sf::st_union() %>%  # union to remove overlap
-      sf::st_as_sf()  # put back in sf format, with only geometry column
 
-   sidewalk <- checkgeometry(sidewalk, "POLYGON")
+
 
    ### Create the workflow for beaches (at a later point) -----
 
@@ -172,7 +186,7 @@ capacity_access_nature <- function(x = parent.frame()$mm,
    ### Create full access layer that will be used to clip the map ----
    message("Generating accessibility mask (this may take a while)")
    accessmask <- rbind(access, GI_access, sidewalk) %>%
-      sf::st_union() %>%  # union to remove overlap between layer
+      sf::st_union() %>%  # union to remove overlap between layers
       sf::st_sf()
 
    rm(GI_access, sidewalk, access)
@@ -180,10 +194,23 @@ capacity_access_nature <- function(x = parent.frame()$mm,
    accessmask <- checkgeometry(accessmask, "POLYGON")  # make sure we have poly format
 
 
-   ### Create full GI subset that will be clipped by access ----
+   ### Create full GI subset that will be masked by access ----
 
-   # All greenspace
-   green_all <- dplyr::filter(x, GI != "Not Greenspace")
+   # All greenspace (selection before June 2021)
+   #green_all <- dplyr::filter(x, GI != "Not Greenspace")
+
+   # All greenspace, now without previous dependency on the GI attribute
+   # (which may not be available in intervention polygons)
+
+   green_all <- dplyr::filter(x,
+                              !HabBroad %in% c(
+      "Artificial exposure / waste",
+      "Built up areas",
+      "Roads", "Railway", "Pavement", "Path"
+   ),
+      !HabCode_B %in% c("Unclassified, not greenspace",
+                        "Unclassified, area in development"))
+
 
 
    ### Rasterize -----
