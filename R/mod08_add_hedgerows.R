@@ -47,7 +47,7 @@ add_hedgerows <- function(mm = parent.frame()$mm,
       # Tidy up the files so we can combine them together
 
       hedge <- lapply(hedge, function(x) sf::st_zm(x, drop = TRUE) %>% # remove Z dimension if present
-                         checkgeometry(., studyAreaBuffer) %>% # check proj
+                         checkcrs(., studyAreaBuffer) %>% # check proj
                          sf::st_geometry() %>% # drop attributes
                          sf::st_as_sf()) # make sure format is sf df
 
