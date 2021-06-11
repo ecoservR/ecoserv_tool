@@ -81,7 +81,7 @@ capacity_access_nature <- function(x = parent.frame()$mm,
    x <- merge(x, hab_lookup, by.x = "HabCode_B", by.y = "Ph1code", all.x = TRUE)
 
    # removed dependencies on group and GI because intervention maps don't have updated values
-   x <- x[c("HabCode_B",
+   x <- x[c("HabCode_B", "HabClass", "HabBroad",
             #"Group",
             #"GI",
             "GIpublic", "Naturalness")] # keep only required columns
