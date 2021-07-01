@@ -102,8 +102,8 @@ create_network <- function(x = parent.frame()$mm,
                          by = c("HabCode_B" = "Ph1code"))
 
 
-   # Check geometry of mm as needs to be clean for rasterizing
-   x <- ecoservR::checkgeometry(x, "POLYGON")
+   # # Check geometry of mm as needs to be clean for rasterizing
+   # x <- ecoservR::checkgeometry(x, "POLYGON")
 
    # Create raster template for all rasters
 
@@ -118,23 +118,41 @@ create_network <- function(x = parent.frame()$mm,
 
    source <- x[x[[costcol]] == 1, ]
 
+   # Check geometry as needs to be clean for rasterizing
+   source <- ecoservR::checkgeometry(source, "POLYGON")
+
    if (nrow(source) == 0) {
       message(paste0("No ", habitat, " habitat in your study area."))
       return() # exit function without crashing
    }
 
-   # Union to keep only large enough patches
-   source <- source %>%
-      rmapshaper::ms_simplify(keep = 0.1) %>%
-      sf::st_buffer(5) %>% sf::st_buffer(-5) %>% ## buffer out and in to merge close enough patches
-      sf::st_union() %>%
-      sf::st_as_sf() %>%
-      ecoservR::checkgeometry(.)
+   # Need to union adjacent patches to calculate area correctly, but unioning a lot of polygons is a serious bottleneck. Instead we rasterize to identify patches, and then polygonize them.
+
+   source_r <- fasterize::fasterize(source, r)
+
+   source_r <- terra::rast(source_r)
+   patches <- terra::patches(source_r, direction = 8)
+   rm(source_r)
+
+   source <- sf::st_as_sf(
+      stars::st_as_stars(patches),
+      as_points = FALSE,
+      merge = TRUE) %>%
+      dplyr::mutate(area_ha = as.numeric(sf::st_area(.))/10000) %>%
+      dplyr::select(-layer) # remove the attribute that stars adds
+
+
+   # # Union to keep only large enough patches - BOTTLENECK: could this be done from raster instead?
+   # source <- source %>%
+   #    rmapshaper::ms_simplify(keep = 0.1) %>%
+   #    sf::st_buffer(5) %>% sf::st_buffer(-5) %>% ## buffer out and in to merge close enough patches
+   #    sf::st_union() %>%
+   #    sf::st_as_sf() %>%
+   #    ecoservR::checkgeometry(.)
 
    # Calculate area and remove small bits
 
    source <- source %>%
-      dplyr::mutate(area_ha = as.numeric(sf::st_area(.))/10000) %>%
       dplyr::filter(area_ha > minsource)
 
    if (nrow(source) == 0) {
@@ -147,7 +165,7 @@ create_network <- function(x = parent.frame()$mm,
    source_r <- fasterize::fasterize(source, r)
 
    message("Creating cost raster for ", habitat)
-   # Create permeability raster
+   # Create resistance raster
    cost_r <- fasterize::fasterize(x, r, field = costcol)
 
 
