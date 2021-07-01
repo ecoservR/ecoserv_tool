@@ -12,7 +12,7 @@
 #'
 #' Runs the access to nature ecosystem service model, generating capacity scores based on perceived "naturalness" of the habitats and their public accessibility. Calls external datasets which must be supplied by user: Public Rights of Way, CRoW, Local and National Nature Reserves.
 
-#' @param x A basemap, in a list of sf tiles or as one sf object. Must have attributes HabCode_B, Group (OS MasterMap Descriptive Group), GI (type of green infrastructure), and GIpublic (Private/Restricted/Public access).
+#' @param x A basemap, in a list of sf tiles or as one sf object. Must have attributes HabCode_B, GI (type of green infrastructure), and GIpublic (Private/Restricted/Public access).
 #' @param studyArea The boundaries of the site, as one sf object. The final raster will be masked to this shape. For best results this shape should be smaller than the basemap (which should be buffered by typically 300 m - 1km to avoid edge effects).
 #' @param prow Path to folder containing Public Rights of Way data for your study area (shapefile or geopackage).
 #' @param crow Path to folder containing CRoW data (Open Country and Registered Common Land) for your study area (shapefile or geopackage).
