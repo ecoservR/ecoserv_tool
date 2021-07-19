@@ -34,6 +34,7 @@ Imports:
     stars (>= 0.4.3),
     maptools (>= 0.9.4),
     gdistance (>= 1.3.6),
+    rmapshaper (>= 0.4.5),
     data.table (>= 1.12.8),
     shiny (>= 1.5.0),
     shinyjs (>= 1.1),
