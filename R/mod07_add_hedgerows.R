@@ -53,11 +53,12 @@ add_hedgerows <- function(mm = parent.frame()$mm,
 
       hedge <- do.call(rbind, hedge) %>% sf::st_as_sf()  # putting back into one single sf object
 
+      ## make sure the geometry column has the same name in both hedges and mm
+      hedge <- ecoservR::rename_geometry(hedge, "geometry")
+      mm <- lapply(mm, function(x) ecoservR::rename_geometry(x, "geometry"))
+
 
       # DATA PREP -----------------------------------------------------------------------------------
-
-      # Clip to study area
-      hedge <- suppressWarnings(sf::st_intersection(hedge, sf::st_geometry(studyAreaBuffer)))
 
       message("Creating hedgerows from linear features")
       # Keep only the geometry column
@@ -66,13 +67,30 @@ add_hedgerows <- function(mm = parent.frame()$mm,
          sf::st_buffer(1.25, endCapStyle = "ROUND", joinStyle = "MITRE")
       # rounded ends give best results when unioning, even if add an extra meter to the end of the hedge
 
+
+      ## Grid the polygonized hedgerows so we have named tiles that match mm
+
+      SAgrid <- ecoservR::grid_study(studyAreaBuffer) # create grid
+      hedge <- lapply(SAgrid, function(x)  # tile hedges
+         sf::st_intersection(hedge, st_geometry(x)) %>%
+            ecoservR::checkgeometry(.) %>%
+            sf::st_as_sf())
+
+      hedge <- hedge[sapply(hedge, function(x) nrow(x) > 0)] # remove empty tiles
+
+      rm(SAgrid)
+
       # The union is necessary to remove overlap (takes a while)
 
       message("Unioning hedgerows to remove overlaps")
 
-      hedge <- sf::st_union(hedge) %>%
-         sf::st_as_sf() %>%
-         rmapshaper::ms_explode() # union and convert to single-part poly
+
+      hedge <- lapply(hedge, function(x){
+
+         sf::st_union(x) %>%
+            sf::st_as_sf() %>%
+            ecoservR::checkgeometry(.) # union and convert to single-part poly
+      })
 
 
 
@@ -81,38 +99,50 @@ add_hedgerows <- function(mm = parent.frame()$mm,
       # Trim hedges so that the buffer doesn't encroach on structures (buildings and roads)
 
       for (i in 1:length(mm)){
-         message("Reshaping hedgerows, tile ", names(mm)[[i]])
+
+         tilename <- names(mm)[[i]]
+
+         if (!tilename %in% names(hedge)){next}
+
+
+         message("Reshaping hedgerows, tile ", tilename)
 
          # Get index of manmade features for that tile
          index <- (mm[[i]][["Make"]] == "Manmade" | mm[[i]][["Theme"]] == "Water")
 
-         if (any(index)){
-            hedge <- rmapshaper::ms_erase(hedge, mm[[i]][index,]) %>%  # mask
-               checkgeometry(.)
+         if (any(index)){  # if we detected some of those features
+
+            # mask them from the hedge tile
+            hedge[[tilename]] <- rmapshaper::ms_erase(hedge[[tilename]], mm[[i]][index,]) %>%
+               ecoservR::checkgeometry(.)
          }
       }
 
 
-      # Remove land from mm -----------------------------------------------------
 
+      # Remove land from mm -----------------------------------------------------
 
       ## In each tile, identify which mastermap polygons intersect the hedges.
       ## Remove the shape of the hedges from them
 
-
       for (i in 1:length(mm)){
-         message("Preparing basemap to receive hedgerows, tile ", names(mm)[[i]])
+
+         tilename <- names(mm)[[i]]
+
+         if (!tilename %in% names(hedge)){next}
+
+         message("Preparing basemap to receive hedgerows, tile ", tilename)
 
          # creating indices so we subset out the smaller amount of data possible
-         indexmm <- which(lengths(sf::st_intersects(mm[[i]], hedge))>0)  # to subset mm poly intersecting
+         indexmm <- which(lengths(sf::st_intersects(mm[[i]], hedge[[tilename]]))>0)  # to subset mm poly intersecting
 
 
          if (length(indexmm) > 0){ # only erase if there are features
 
-            indexh <- which(lengths(sf::st_intersects(hedge, mm[[i]][indexmm,]))>0)
+            indexh <- which(lengths(sf::st_intersects(hedge[[tilename]], mm[[i]][indexmm,]))>0)
 
             # create a subset with the revised polygons
-            mm_erased <- rmapshaper::ms_erase(mm[[i]][indexmm,], hedge[indexh,]) %>%
+            mm_erased <- rmapshaper::ms_erase(mm[[i]][indexmm,], hedge[[tilename]][indexh,]) %>%
                checkgeometry(.)
 
             # remove the original polys from df
@@ -126,62 +156,42 @@ add_hedgerows <- function(mm = parent.frame()$mm,
       }
 
 
-
       # Burn in hedges ----------------------------------------------------------
       message("Burning hedges into basemap")
-
-      ## Intersect hedges to assign them to a grid reference
-
-      hedge <- hedge %>%
-         sf::st_make_valid() %>%
-         sf::st_intersection(ecoservR::grid) %>%
-         dplyr::select(OStile = TILE_NAME)
-
-
-      ## Add columns to hedges to correspond with mm attributes
-
-      mmcols <- setdiff(names(mm[[1]]), names(hedge))  # mm cols not present in hedge col
-
-      hedge[mmcols] <- NA  # ready for binding
-
-      # Populate attributes
-      hedge <- hedge %>% dplyr::mutate(Term = "Hedgerow",
-                                       Group = "Natural Environment",
-                                       Make = "Natural",
-                                       Theme = "Land"
-      )
-
 
       ## Bind hedges into corresponding mm list element
 
       for (i in 1:length(mm)){
-         tile <- names(mm)[i]
-         mm[[tile]] <- rbind(mm[[tile]],
-                             dplyr::filter(hedge, OStile == tile) %>% dplyr::select(-OStile))
+
+         tilename <- names(mm)[i]
+
+         if (!tilename %in% names(hedge)){next}
+
+         ## Add columns to hedges to correspond with mm attributes
+
+         mmcols <- setdiff(names(mm[[i]]), names(hedge[[tilename]]))  # mm cols not present in hedge col
+
+         hedge[[tilename]]$rmapshaperid <- NULL # drop rmapshaper column
+         hedge[[tilename]][mmcols] <- NA  # ready for binding
+
+         # Populate attributes
+         hedge[[tilename]] <- hedge[[tilename]] %>%
+            dplyr::mutate(Term = "Hedgerow",
+                          Group = "Natural Environment",
+                          Make = "Natural",
+                          Theme = "Land"
+            )
+
+
+
+
+
+         mm[[i]] <- rbind(mm[[i]], hedge[[tilename]])
       }
 
 
-      ## Check that geometry column has same name across all tiles
 
-      geomcol <- lapply(mm, function(x) attr(x, "sf_column")) %>% unlist()
-
-      if (length(unique(geomcol)) > 1){ # if there is more than 1 name for the geometry column
-         message("Repairing names of geometry columns")
-         mm <- lapply(mm, function(x){
-            if (attr(x, "sf_column") != "geometry"){
-               naming <- setNames(attr(x, "sf_column"), "geometry")
-               x <- dplyr::rename(x, !!!naming)
-               sf::st_geometry(x) <- "geometry" # IMPORTANT! need to tell sf where to look for new geometry col
-            }
-
-            return(x)
-         })
-         rm(naming)
-
-      }
-      rm(geomcol)
-
-      suppressWarnings(rm(grid, indexmm, indexh, i, mmcols, hedge, tile) )
+      suppressWarnings(rm(indexmm, indexh, i, mmcols, hedge, tilename) )
 
 
       # Validate geometries one last time
@@ -190,11 +200,11 @@ add_hedgerows <- function(mm = parent.frame()$mm,
 
       # SAVE UPDATED MASTER MAP ---------------------------------------------------------------------
 
-      saveRDS(mm, file.path(output_temp, paste0(title, "_MM_08.RDS")))
+      saveRDS(mm, file.path(output_temp, paste0(title, "_MM_07.RDS")))
 
       # Update the project log with the information that map was updated
 
-      projectLog$last_success <- "MM_08.RDS"
+      projectLog$last_success <- "MM_07.RDS"
 
       timeB <- Sys.time() # stop time
 
