@@ -209,7 +209,8 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
                                         ecoservR::list_to_char))  %>%
             dplyr::filter(PhysicalLevel != "51",  # remove things above ground level
                           Group != "Landform" ) %>%
-            dplyr::mutate(TOID = as.character(gsub("[a-zA-Z ]", "", TOID)))  # remove osgb characters which sometimes appear and sometimes not
+            dplyr::mutate(TOID = as.character(gsub("[a-zA-Z ]", "", TOID))) %>%   # remove osgb characters which sometimes appear and sometimes not
+            dplyr::select(-PhysicalLevel)  # remove useless column
 
       })
 
