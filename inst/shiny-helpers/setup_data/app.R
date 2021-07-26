@@ -75,7 +75,7 @@ ui <- fluidPage(
                                       winTitle = "Please select OS Greenspace folder"),
 
                         definePathsUI(id = "button4",
-                                      buttonLabel = "OS Open Greenspace*",
+                                      buttonLabel = "OS Open Greenspace",
                                       winTitle = "Please select OS Open Greenspace folder"),
 
                         definePathsUI(id = "button5",
@@ -203,11 +203,11 @@ server <- function(input, output, session) {
    # Before a value is selected, value is NA
 
    paths <- reactiveValues(
-      mm = reactive("C:/BasemappeR/data/mastermap"), # for testing
-      #mm = callModule(definePaths, "button1", defaultpath = user_proj),
+      #mm = reactive("C:/BasemappeR/data/mastermap"), # for testing
+      mm = callModule(definePaths, "button1", defaultpath = user_proj),
       studyArea = callModule(definePaths, "button2", defaultpath = user_proj),
-      green = reactive("C:/Basemapper/data/greenspace"), # for testing
-      #green = callModule(definePaths, "button3", defaultpath = user_proj),
+      #green = reactive("C:/Basemapper/data/greenspace"), # for testing
+      green = callModule(definePaths, "button3", defaultpath = user_proj),
       opgreen = callModule(definePaths, "button4", defaultpath = user_proj),
       #opgreen = reactive("C:/BasemappeR/data/opengreenspace"), # for testing
       corine = callModule(definePaths, "button5", defaultpath = user_proj),
@@ -227,8 +227,7 @@ server <- function(input, output, session) {
    ## Only enable Check button when compulsory datasets are not NA
 
    observeEvent(req(paths$mm(),
-                    paths$studyArea(),
-                    paths$opgreen()
+                    paths$studyArea()
    ), {
       shinyjs::enable("checkdata")
    })
