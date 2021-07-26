@@ -580,7 +580,7 @@ classif_green <- function(x){
 
       GI == "Camping Or Caravan Park" & HabCode_B == "B4/J11" ~ "J34",
 
-      # all amenity fields
+      # all amenity fields, if grassy, scattered trees or unknown
       GI %in% c("Amenity",
                 "Religious Grounds", "Cemetery",
                 "Public Park Or Garden",
@@ -591,9 +591,14 @@ classif_green <- function(x){
                 "Playing Field",
                 "Other Sports Facility",
                 "Institutional Grounds",
-                "School Grounds") & (grepl("B4/J11", HabCode_B)|is.na(HabCode_B))~ "J12",
+                "School Grounds") &  (grepl(paste0(c("A3", "B"), collapse = "|"), HabCode_B) | is.na(HabCode_B)) ~ "J12",
+
+      ### PREVIOUSLY:
+      #(grepl("B4/J11", HabCode_B)|is.na(HabCode_B))~ "J12",
       # relaxed need of HabCode_B (was B4/J11)
       # new edit; removed the is.na(phi) condition so reintroduced the B4J11
+
+
 
       grepl("General Surface", Group) & GI == "Private Garden" ~ "J56",
 
