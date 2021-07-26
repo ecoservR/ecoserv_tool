@@ -163,3 +163,21 @@ calculateDistances <- function(r){
 }
 
 
+
+# Rename geometry column --------------------------------------------------
+
+#' Rename geometry column
+#'
+#' The geometry column of sf object can have inconsistent names (e.g. geom, geometry, etc). This function renames the geometry attribute to a given name.
+
+#' @param g The sf object whose geometry you want to change
+#' @param name The name you want the geometry column renamed to
+#' @return the sf object g with the geometry column name changed
+#' @export
+#'
+rename_geometry <- function(g, name){
+   current = attr(g, "sf_column")
+   names(g)[names(g)==current] = name
+   sf::st_geometry(g)=name
+   g
+}
