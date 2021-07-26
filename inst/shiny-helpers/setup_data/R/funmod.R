@@ -51,7 +51,7 @@ guessFiletypeShiny <- function(path){
 
    ## Get list of all (unique) file extensions and subset to accepted formats only
 
-   formats <- c(".shp$", ".gpkg$", ".json$", ".tif", ".asc$", ".gz$")
+   formats <- c(".shp$", ".gpkg$", ".json$", ".tif", ".asc$", ".gz$", ".gml$")
 
    detected <- list.files(path, pattern = paste(formats, collapse = "|"), recursive = TRUE) %>% # all files with ending
       tools::file_ext() %>% unique()  # get unique extensions
@@ -170,10 +170,6 @@ definePaths <- function(input, output, session, defaultpath = NULL, set = FALSE)
 
 ## MODULE TO POP UP A MODAL FOR LAYER NAMES ------
 
-# Modal module UI  #  NO NEED FOR A UI
-# modalModuleUI <- function(id) {
-#    ns <- NS(id)
-# }
 
 # Modal module server
 modalModule <- function(input, output, session,

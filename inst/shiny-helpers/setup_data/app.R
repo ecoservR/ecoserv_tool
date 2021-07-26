@@ -24,7 +24,7 @@ require(shiny)
 # retrieve the user's working directory
 #user_proj <-  shiny::getShinyOption("projwd")
 
-user_proj <- projwd
+user_proj <- projwd   # set when the app is launched via the launchWizard function (wd passed as argument)
 
 # UI ----------------------------------------------------------------------
 ui <- fluidPage(
@@ -34,7 +34,6 @@ ui <- fluidPage(
 
    tags$head(
       shiny::includeCSS(file.path('www', 'theme.css'))
-   #shiny::includeCSS(system.file("shiny-helpers/setup_data/www/theme.css", package="ecoservR"))
    ),
 
    shiny::titlePanel(
@@ -127,23 +126,9 @@ ui <- fluidPage(
               ))
        ),
 
-       # shinyjs::hidden( # doesn't need an actual output to show spinner
-       #    div(id = "busymsg",
-       #        shinycssloaders::withSpinner(textOutput("busy"), size = 1.2, proxy.height = 100,
-       #                                     type = 5, color = "#0dc9b6")
-       #    )
-       # ),
 
+       br()
 
-       br(),
-
-       # textOutput("isvalid")
-       #tableOutput("layers"),
-       #tableOutput("df"),
-       # tableOutput("faultyvec"),
-       # textOutput("testindex")
-
-       #  )# end of main panel
    ), # end of div for paths
 
    shinyjs::hidden(div(id = "setproject", class = "main-content",
@@ -218,11 +203,11 @@ server <- function(input, output, session) {
    # Before a value is selected, value is NA
 
    paths <- reactiveValues(
-      #mm = reactive("C:/BasemappeR/data/mastermap"), # for testing
-      mm = callModule(definePaths, "button1", defaultpath = user_proj),
+      mm = reactive("C:/BasemappeR/data/mastermap"), # for testing
+      #mm = callModule(definePaths, "button1", defaultpath = user_proj),
       studyArea = callModule(definePaths, "button2", defaultpath = user_proj),
-      #green = reactive("C:/Basemapper/data/greenspace"), # for testing
-      green = callModule(definePaths, "button3", defaultpath = user_proj),
+      green = reactive("C:/Basemapper/data/greenspace"), # for testing
+      #green = callModule(definePaths, "button3", defaultpath = user_proj),
       opgreen = callModule(definePaths, "button4", defaultpath = user_proj),
       #opgreen = reactive("C:/BasemappeR/data/opengreenspace"), # for testing
       corine = callModule(definePaths, "button5", defaultpath = user_proj),
@@ -387,10 +372,17 @@ server <- function(input, output, session) {
 
       req(isTRUE(validtype()))  # only compute once data inputs successfully checked
 
+      # List all the (spatial) files in the mm folder
+      mmfiles <- list.files(rv$df[rv$df$dataset == "mm", ][["path"]],
+                            pattern = paste0(guessFiletypeShiny(rv$df[rv$df$dataset == "mm", ][["path"]]),"$"),
+                            recursive=TRUE, full.names = TRUE)
+
+      # if hundreds of tiles we don't want to loop through all of them to check layer name; check a section instead
+
+      if (length(mmfiles) > 20){ mmfiles <- mmfiles[1:20]}
+
       # list all layer names in mm folder
-      mm <- lapply(list.files(rv$df[rv$df$dataset == "mm", ][["path"]],
-                              pattern = paste0(guessFiletypeShiny(rv$df[rv$df$dataset == "mm", ][["path"]]),"$"),
-                              recursive=TRUE, full.names = TRUE),
+      mm <- lapply(mmfiles,
                    function(x) sf::st_layers(x)[[1]])
 
       # list all layer names in opgr folder
