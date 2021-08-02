@@ -26,6 +26,10 @@ checkNames <- function(folder, layer = NULL, user_names, name = NULL){
       layer <- sf::st_layers(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]])[[1]] # if layer not specified, probably just one and we check the first
    }
 
+   # if layer is not NULL we have a regex to use to get the layer name
+   layers <- sf::st_layers(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]])[[1]] ## all layer names of 1st file
+   layer <- layers[grepl(layer, layers)]  # get just the name that matches
+
    # import 0 rows from the data but returns headers
    actualnames <- sf::st_read(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]],
                           layer = layer,
