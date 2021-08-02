@@ -51,7 +51,7 @@ guessFiletypeShiny <- function(path){
 
    ## Get list of all (unique) file extensions and subset to accepted formats only
 
-   formats <- c(".shp$", ".gpkg$", ".json$", ".tif", ".asc$", ".gz$", ".gml$")
+   formats <- c(".shp$", ".gpkg$", ".json$", ".tif$", ".asc$", ".gz$", ".gml$")
 
    detected <- list.files(path, pattern = paste(formats, collapse = "|"), recursive = TRUE) %>% # all files with ending
       tools::file_ext() %>% unique()  # get unique extensions
