@@ -104,8 +104,9 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
       ## and create a layer list with the actual layer names.
 
       # first we subset the files to just those with the right string
+      # UPDATE 27 July 2021: mmlayer can be a list of layer names rather than a common string, so paste0 is required to test across all names
 
-      fileList <- fileList[grepl(mmlayer, fileList)]
+      fileList <- fileList[grepl(paste0(mmlayer, collapse = "|"), fileList)]
 
       if (length(fileList) == 0){stop("Could not find layers corresponding to ", mmlayer)}
 
