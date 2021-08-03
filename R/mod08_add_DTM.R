@@ -48,6 +48,20 @@ add_DTM <- function(mm = parent.frame()$mm,
       dtm <- lapply(dtm, function(x) raster::raster(x))
 
 
+   ## If no projection set, flash a warning and assign OSGB1936
+
+      if (is.na(raster::crs(dtm[[1]]))){
+
+         message("Warning! No projection set for your DTM so we will assume it is OSGB 1936 (British National Grid).")
+
+
+         lapply(dtm, function(x){
+            raster::crs(x) <- sp::CRS(SRS_string = "EPSG:27700")
+            return(x)
+         })
+
+      }
+
 # TILE IF NEEDED ------------------------------------------------------------------------------
 
 ## If there is only one raster, we tile using OS grid to match grid ref of mm:
@@ -55,7 +69,6 @@ add_DTM <- function(mm = parent.frame()$mm,
 if (length(dtm) == 1){
 
    # we can call the object "grid" directly
-
 
    gridSA <- suppressWarnings(sf::st_intersection(grid, studyAreaBuffer))  # create gridded study area
 
