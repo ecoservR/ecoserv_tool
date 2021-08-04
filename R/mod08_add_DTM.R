@@ -55,7 +55,7 @@ add_DTM <- function(mm = parent.frame()$mm,
          message("Warning! No projection set for your DTM so we will assume it is OSGB 1936 (British National Grid).")
 
 
-         lapply(dtm, function(x){
+         dtm <- lapply(dtm, function(x){
             raster::crs(x) <- sp::CRS(SRS_string = "EPSG:27700")
             return(x)
          })
