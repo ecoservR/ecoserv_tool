@@ -181,3 +181,26 @@ rename_geometry <- function(g, name){
    sf::st_geometry(g)=name
    g
 }
+
+
+
+# Find center point of a raster -------------------------------------------
+
+#' Find center of a raster
+#'
+#' Calculates the middle point of a raster from its extent. Assumes the projection is British National Grid (EPSG 27700). Not to be called directly: used in the add_DTM() workflow to assign a grid reference to tiles.
+
+#' @param r The raster object
+#' @return A sf point
+#' @export
+#'
+raster_centroid <- function(r){
+
+   bbox <- sp::bbox(r)
+
+   centro <- sf::st_point(
+      c(mean(c(bbox[[1]], bbox[[3]])),
+        mean(c(bbox[[2]], bbox[[4]])))) %>%
+      sf::st_geometry() %>% sf::st_sf(crs = 27700)
+
+}

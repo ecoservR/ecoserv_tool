@@ -16,8 +16,8 @@
 #' @export
 
 add_DTM <- function(mm = parent.frame()$mm,
-                      studyAreaBuffer = parent.frame()$studyAreaBuffer,
-                      projectLog = parent.frame()$projectLog){
+                    studyAreaBuffer = parent.frame()$studyAreaBuffer,
+                    projectLog = parent.frame()$projectLog){
 
    timeA <- Sys.time() # start time
 
@@ -36,19 +36,19 @@ add_DTM <- function(mm = parent.frame()$mm,
    if (!is.na(terrainpath) & !is.null(terrainpath)){
       message("Preparing to update baseline with DTM data...")
 
- # DATA IMPORT ---------------------------------------------------------------------------------
+      # DATA IMPORT ---------------------------------------------------------------------------------
 
-   # Check all files at specified path
+      # Check all files at specified path
       dtm <- list.files(terrainpath, # folder with DTM tiles
                         pattern = paste(c(".asc$", ".tif$"),collapse="|"),  # find all tif or asc files
                         all.files=TRUE, full.names=TRUE,
                         recursive = TRUE)
 
-   # Read in the dtm tiles
+      # Read in the dtm tiles
       dtm <- lapply(dtm, function(x) raster::raster(x))
 
 
-   ## If no projection set, flash a warning and assign OSGB1936
+      ## If no projection set, flash a warning and assign OSGB1936
 
       if (is.na(raster::crs(dtm[[1]]))){
 
@@ -56,49 +56,73 @@ add_DTM <- function(mm = parent.frame()$mm,
 
 
          dtm <- lapply(dtm, function(x){
-            raster::crs(x) <- sp::CRS(SRS_string = "EPSG:27700")
-            return(x)
+            suppressWarnings({
+               raster::crs(x) <- sp::CRS(SRS_string = "EPSG:27700")
+               return(x)
+            })
          })
 
       }
 
-# TILE IF NEEDED ------------------------------------------------------------------------------
+      # Calculate side of square (assuming projection is in meters)
+      span <- dim(dtm[[1]])[[1]]*raster::res(dtm[[1]])[[1]]
 
-## If there is only one raster, we tile using OS grid to match grid ref of mm:
+      # TILE IF NEEDED ------------------------------------------------------------------------------
 
-if (length(dtm) == 1){
+      ## If there is only one raster, we tile using OS grid to match grid ref of mm:
 
-   # we can call the object "grid" directly
+      if (length(dtm) == 1){
 
-   gridSA <- suppressWarnings(sf::st_intersection(grid, studyAreaBuffer))  # create gridded study area
+         # we can call the object "grid" directly
 
-   gridSA$TILE_NAME <- droplevels(gridSA$TILE_NAME)  # drop squares that are not in the study area
+         gridSA <- suppressWarnings(sf::st_intersection(grid, studyAreaBuffer))  # create gridded study area
 
-   dtm_tiles <- vector("list", length = nrow(gridSA))  # create empty list that we will fill with tiles
-   names(dtm_tiles) <- gridSA$TILE_NAME
+         gridSA$TILE_NAME <- droplevels(gridSA$TILE_NAME)  # drop squares that are not in the study area
 
-   # Create the dtm tiles for each 10x10km square in study area, and save to temporary folder defined previously
+         dtm_tiles <- vector("list", length = nrow(gridSA))  # create empty list that we will fill with tiles
+         names(dtm_tiles) <- gridSA$TILE_NAME
+
+         # Create the dtm tiles for each 10x10km square in study area, and save to temporary folder defined previously
          for (i in 1:length(dtm_tiles)){
             dtm_tiles[[i]] <- raster::crop(dtm[[1]], gridSA[gridSA$TILE_NAME == names(dtm_tiles)[[i]],],
-                                   filename = file.path(scratch_path, paste("dtm_tile", i, sep = "")),
-                                   overwrite = TRUE)
+                                           filename = file.path(scratch_path, paste("dtm_tile", i, sep = "")),
+                                           overwrite = TRUE)
 
          }
 
          dtm <- dtm_tiles
          rm(dtm_tiles)
 
+      } else if (span < 10000){
+
+         # If we imported tiles and they are smaller than 10x10 km, we take their center point and place it within a 10km grid ref, and assign the grid ref as name
+
+         rcentro <- lapply(dtm, function(x) raster_centroid(x))  # find centroid (spatial point)
+         rcentro <- do.call(rbind, rcentro)  # make into sf df
+
+         # index which grid tiles each raster belongs to (several rasters will belong to one tile)
+         rtiles <- sf::st_intersects(rcentro, ecoservR::grid)
+
+         # add the 10km grid ref as names to the rasters
+         # This could crash if a rcentro point is exactly across two tiles, but shouldn't be if dtm from any reputable source
+         names(dtm) <- ecoservR::grid[unlist(rtiles),]$TILE_NAME
+
+      } else if (span > 10000){
+         # if imported tiles are larger than a 10km tile (unlikely), we just use the old extraction
+         # setting names to null ensures that the tile matching workflow fails and reverts to slower extraction
+
+         names(dtm) <- NULL
       }
 
-      # If the mm was already tiles, then these tiles have been imported in the dtm list object, and there's nothing else to do. (The extraction function will be slower because needs to find the overlapping geometries.)
 
-# EXTRACTION ----------------------------------------------------------------------------------
+
+      # EXTRACTION ----------------------------------------------------------------------------------
 
       message("Extracting DTM data...")
 
-      ## Here we need to use the old workflow that allows for any number of tiles as we don't know what they are (could be Terrain 5: 5 km tiles, or Terrain 50, etc, and do not necessarily match the 10x10km tiles)
+      ## If we managed to assign names to the dtm tiles, extraction will be one-to-one (merging smaller dtm tiles first if needed)
 
-      mm <- mapply(function(x, n) extractRaster(x, dtm, fun = "mean", tile = NULL, newcol = "elev"),
+      mm <- mapply(function(x, n) extractRaster(x, dtm, fun = "mean", tile = n, newcol = "elev"),
                    x = mm,
                    n = names(mm), # passing the names of the tiles will allow to select corresponding raster, making function faster. If user is not working with named tiles, will be read as null and the old function will kick in (slower but works)
                    SIMPLIFY = FALSE)  # absolutely necessary
@@ -150,16 +174,16 @@ if (length(dtm) == 1){
 
 
 
-     } else {message("No elevation data input specified.")} # end of running condition
+   } else {message("No elevation data input specified.")} # end of running condition
 
 
-# Return mm to environment, whether it has been updated or not.
-      return({
-         invisible({
-            mm <<- mm
-            projectLog <<- projectLog
-         })
+   # Return mm to environment, whether it has been updated or not.
+   return({
+      invisible({
+         mm <<- mm
+         projectLog <<- projectLog
       })
+   })
 
 } # end of function
 
