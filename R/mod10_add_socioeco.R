@@ -2,7 +2,7 @@
 ### Worflow functions               ###
 ### for EcoservR                    ###
 ### Sandra Angers-Blondin           ###
-### 05-01-2021                      ###
+### revised 09-08-2021              ###
 #######################################
 
 
@@ -15,7 +15,7 @@
 # system.file("extdata/IMD", package = "ecoservR")
 # we can therefore use list.files to get list of available tiles and only load those required (these are the only ones that will be actually loaded in memory) by using regex on tile names
 
-test <- list.files(system.file("extdata/IMD", package = "ecoservR"))
+#test <- list.files(system.file("extdata/IMD", package = "ecoservR"))
 
 
 #' Add socio-economic data
@@ -29,8 +29,8 @@ test <- list.files(system.file("extdata/IMD", package = "ecoservR"))
 #' @export
 
 add_socioeco <- function(mm = parent.frame()$mm,
-                      studyAreaBuffer = parent.frame()$studyAreaBuffer,
-                      projectLog = parent.frame()$projectLog){
+                         studyAreaBuffer = parent.frame()$studyAreaBuffer,
+                         projectLog = parent.frame()$projectLog){
 
    timeA <- Sys.time() # start time
 
@@ -45,127 +45,135 @@ add_socioeco <- function(mm = parent.frame()$mm,
 
 
 
-# Identify which tiles need loading ---------------------------------------
+   # Identify which tiles need loading ---------------------------------------
 
    if (is.null(names(mm))) stop("This function requires basemap tiles to be named with a grid reference. Run the add_grid_ref() function and retry.")
 
-tiles <- unique(substr(names(mm),1, 2))  # keep the first 2 character of map tile names, which corresponds to the 100 km x 100 km tiles used to store the socio-eco data
+   tiles <- unique(substr(names(mm),1, 2))  # keep the first 2 character of map tile names, which corresponds to the 100 km x 100 km tiles used to store the socio-eco data
 
-tiles <- paste0("_",tiles)  # add an underscore to enable the pattern-matching in next step
+   tiles <- paste0("_",tiles)  # add an underscore to enable the pattern-matching in next step
 
 
-## Search for the data in the package files, only keeping those with a relevant grid ref
-census_tiles <- list.files(system.file("extdata/census", package = "ecoservR"),
+   ## Search for the data in the package files, only keeping those with a relevant grid ref
+   census_tiles <- list.files(system.file("extdata/census", package = "ecoservR"),
+                              pattern = paste0(tiles, collapse = "|"),
+                              full.names = TRUE)
+
+   imd_tiles <- list.files(system.file("extdata/IMD", package = "ecoservR"),
                            pattern = paste0(tiles, collapse = "|"),
                            full.names = TRUE)
 
-imd_tiles <- list.files(system.file("extdata/IMD", package = "ecoservR"),
-                        pattern = paste0(tiles, collapse = "|"),
-                        full.names = TRUE)
+
+   if (length(census_tiles) == 0 | length(imd_tiles) == 0) stop("Could not find data for study area.")
 
 
-if (length(census_tiles) == 0 | length(imd_tiles) == 0) stop("Could not find data for study area.")
+   # Prepare basemap to receive and extract ----------------------------------
+
+   # Create columns to receive data
+
+   mm <- lapply(mm, function(x) mutate(x,
+                                       housePop = NA_real_,
+                                       health = NA_real_,
+                                       riskgroup = NA_real_))
+
+   # Create an index telling us which features are houses in each basemap tile
+
+   houses <- lapply(mm, function(x) which(x$HabCode_B == "J360"))
+
+   # Create their centroids as simple point data (if no house in a tile, returns empty geometry)
+   centro <- mapply(function(x,y) sf::st_centroid(sf::st_geometry(x[y,])) %>% sf::st_as_sf(),
+                    x = mm,
+                    y = houses,
+                    SIMPLIFY = FALSE)
 
 
-# Prepare basemap to receive and extract ----------------------------------
+   # IMD ---------------------------------------------------------------------
 
-# Create columns to receive data
+   message("Importing Index of Multiple Deprivation (2019) data...")
 
-mm <- lapply(mm, function(x) mutate(x,
-                                    housePop = NA_real_,
-                                    health = NA_real_,
-                                    riskgroup = NA_real_))
+   imd <- lapply(imd_tiles, function(x) readRDS(x)) # read file
+   imd <- do.call(rbind, imd)  # recombine
 
-# Create an index telling us which features are houses in each basemap tile
-
-houses <- lapply(mm, function(x) which(x$HabCode_B == "J360"))
-
-# Create their centroids as simple point data (if no house in a tile, returns empty geometry)
-centro <- mapply(function(x,y) sf::st_centroid(sf::st_geometry(x[y,])) %>% sf::st_as_sf(),
-                 x = mm,
-                 y = houses,
-                 SIMPLIFY = FALSE)
-
-
-# IMD ---------------------------------------------------------------------
-
-message("Importing Index of Multiple Deprivation (2019) data...")
-
-imd <- lapply(imd_tiles, function(x) readRDS(x)) # read file
-imd <- do.call(rbind, imd)  # recombine
-
-# Clip to study area
-imd <- suppressWarnings({imd %>%
-      sf::st_intersection(sf::st_geometry(studyAreaBuffer))
-})
-
-# Tidy up geometries
-imd <- checkgeometry(imd, "POLYGON")
-
-
-message("Extracting IMD data...")
-
-## Use the house feature index and the centroids to query the data
-
-for (i in 1:length(centro)){
-
-   if (nrow(centro[[i]]) == 0) {next} # skip iteration if no houses
-
-   # extract values in IMD layer that fall under each point
-
-   vals <- suppressWarnings({
-      sf::st_intersection(centro[[i]], imd)$health
+   # Clip to study area
+   imd <- suppressWarnings({imd %>%
+         sf::st_intersection(sf::st_geometry(studyAreaBuffer))
    })
 
-   # add values into mm tile using indexing
-
-   mm[[i]][houses[[i]], ][["health"]] <- vals
-
-}
-
-rm(imd, imd_tiles)
+   # Tidy up geometries
+   imd <- checkgeometry(imd, "POLYGON")
 
 
-# Census ------------------------------------------------------------------
+   message("Extracting IMD data...")
 
-# Census data of 2011
-message("Importing census (2011) data...")
+   ## Use the house feature index and the centroids to query the data
 
-census <- lapply(census_tiles, function(x) readRDS(x)) # read file
-census <- do.call(rbind, census)  # recombine
+   for (i in 1:length(centro)){
 
-# Clip to study area
-census <- suppressWarnings({census %>%
-      sf::st_intersection(sf::st_geometry(studyAreaBuffer))
-})
+      if (nrow(centro[[i]]) == 0) {next} # skip iteration if no houses
 
-# Tidy up geometries
-census <- checkgeometry(census, "POLYGON")
+      ## extract values in IMD layer that fall under each point
 
-message("Extracting census data...")
-## Use the house feature index and the centroids to query the data
+      # there is a problem where some house points fall outside of the extracted IMD (on margins of study area)
+      # we need to add an extra subsetting index to not be caught out by extraction of different lengths
+      within_imd <- lengths(st_intersects(centro[[i]], imd)) > 0
 
-for (i in 1:length(centro)){
+      vals <- suppressWarnings({
+         sf::st_intersection(centro[[i]][within_imd,], imd)$health
+      })
 
-   if (nrow(centro[[i]]) == 0) {next} # skip iteration if no houses
+      # add values into mm tile using indexing (only to the houses that actually had an intersection with IMD)
 
-   # extract values in IMD layer that fall under each point
+      mm[[i]][houses[[i]][within_imd], ][["health"]] <- vals
 
-   vals <- suppressWarnings({
-      sf::st_intersection(centro[[i]], census)
+   }
+
+   rm(imd, imd_tiles)
+
+
+   # Census ------------------------------------------------------------------
+
+   # Census data of 2011
+   message("Importing census (2011) data...")
+
+   census <- lapply(census_tiles, function(x) readRDS(x)) # read file
+   census <- do.call(rbind, census)  # recombine
+
+   # Clip to study area
+   census <- suppressWarnings({census %>%
+         sf::st_intersection(sf::st_geometry(studyAreaBuffer))
    })
 
-   # add values into mm tile using indexing
+   # Tidy up geometries
+   census <- checkgeometry(census, "POLYGON")
 
-   mm[[i]][houses[[i]], ][["riskgroup"]] <- vals$riskgroup
-   mm[[i]][houses[[i]], ][["housePop"]] <- vals$housePop
+   message("Extracting census data...")
+   ## Use the house feature index and the centroids to query the data
 
-}
+   for (i in 1:length(centro)){
 
-rm(census, census_tiles, centro, houses, vals, i)
+      if (nrow(centro[[i]]) == 0) {next} # skip iteration if no houses
+
+      # extract values in layer that fall under each point
+
+      # there is a problem where some house points fall outside of the extracted data (on margins of study area)
+      # we need to add an extra subsetting index to not be caught out by extraction of different lengths
+      within_census <- lengths(st_intersects(centro[[i]], census)) > 0
+
+      vals <- suppressWarnings({
+         sf::st_intersection(centro[[i]][within_census,], census)
+      })
+
+      # add values into mm tile using indexing
+
+      mm[[i]][houses[[i]][within_census], ][["riskgroup"]] <- vals$riskgroup
+      mm[[i]][houses[[i]][within_census], ][["housePop"]] <- vals$housePop
+
+   }
+
+   rm(census, census_tiles, centro, houses, vals, i)
 
 
-# Finish and save ---------------------------------------------------------
+   # Finish and save ---------------------------------------------------------
 
    # Save to disk
 
