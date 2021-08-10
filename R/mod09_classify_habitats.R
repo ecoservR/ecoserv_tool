@@ -135,7 +135,7 @@ if ("phi" %in% attributes){
    ## Get rid of the B4/Bu intermediary code as there is no match for it in models
    ## TO DO add decisions to split, but now all to B4
 
-   mm <- lapply(mm, function(x) mutate(x,
+   mm <- lapply(mm, function(x) dplyr::mutate(x,
                                        HabCode_B = case_when(
       HabCode_B == "B4/Bu" ~ "B4",
       TRUE ~ HabCode_B))
