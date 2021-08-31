@@ -28,7 +28,7 @@ Imports:
     rasterVis(>= 0.50.2),
     fasterize (>= 1.0.1),
     tabularaster (>= 0.6.0),
-    landscapemetrics (>= 1.4.3),
+    landscapemetrics (>= 1.5.3),
     spatstat (>= 1.58.2),
     spatstat.geom (>= 2.1.0),
     stars (>= 0.4.3),
