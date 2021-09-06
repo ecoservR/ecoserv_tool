@@ -100,6 +100,18 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
    message("Importing elevation data...")
    dtm <- lapply(dtm, function(x) raster::raster(x))
 
+   # Check whether tiles have a CRS
+   if (is.na(raster::crs(dtm[[1]]))){
+      message("Warning! No coordinate reference system associated with DTM data. Assuming OSGB 1936 (British National Grid; EPSG 27700). Check with your data provider if results are unexpected.")
+
+      dtm <- lapply(dtm, function(x) {
+         raster::crs(x) <- sp::CRS(SRS_string = "EPSG:27700")
+         return(x)
+      })
+
+   }
+
+
    # Keep only those intersecting with basemap extent
    ex <- as(raster::extent(x), "SpatialPolygons")
 
@@ -242,7 +254,7 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
 
       water_score <- raster::writeRaster(
          water_score * soil_r,
-         filename = file.path(scratch, "waterpurif_score"),
+         filename = file.path(scratch, "waterpurif_score2"),
          overwrite = TRUE  # because it's a temporary file we don't mind overwriting it if it exists
       )
 

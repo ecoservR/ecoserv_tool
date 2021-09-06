@@ -158,7 +158,7 @@ capacity_climate_reg <- function(x = parent.frame()$mm,
    ### Apply the mask, because effect is only felt close to greenspaces ----
    message("Applying mask around regulating patches")
    clim_score <- raster::mask(clim_score, mask_r,   # apply the mask on the raster object
-                      filename = file.path(scratch, "climreg_score"),
+                      filename = file.path(scratch, "climreg_score2"),
                       overwrite = TRUE
    )
 
