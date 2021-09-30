@@ -98,7 +98,7 @@ create_network <- function(x = parent.frame()$mm,
 
    # Join costs to the basemap keeping only relevant attributes for faster processing
    x <- dplyr::left_join(x[, c("HabCode_B")],
-                         ecoservR::hab_lookup[,c("Ph1code", costcol)], # join the relevant column
+                         ecoservR::hab_lookup[,c("Ph1code", "HabBroad", costcol)], # join the relevant column
                          by = c("HabCode_B" = "Ph1code"))
 
 
@@ -117,6 +117,39 @@ create_network <- function(x = parent.frame()$mm,
    # Identify patches of source habitat
 
    source <- x[x[[costcol]] == 1, ]
+
+   ## Refine further, as cost of 1 is not necessarily the target habitat
+
+   #### TO DO: CONDITIONAL FILTERING BY HABITAT HERE; ESP FOR POND, MIRE AND LWET
+
+   if (habitat == "woodland"){
+      source <- filter(source, HabBroad %in% c("Woodland, broadleaved", "Woodland, mixed"))
+      } else if (habitat == "grassland"){
+         source <- filter(source, HabBroad %in% c("Grassland, semi-natural", "Maritime cliff and slope"))
+         } else if (habitat == "heath"){
+            source <- filter(source, HabBroad %in% c("Heathland"))
+            } else if (habitat == "pond"){
+      
+               ## Calculate shp_area and shp_index
+      
+               source <- source %>% mutate(
+                  shp_area = as.numeric(st_area(.)),
+                  shp_length = as.numeric(lwgeom::st_perimeter(.))) %>%
+                  # calculate shape index
+                  dplyr::mutate(
+                     shp_index = (pi * ((shp_length / (2 * pi)) ^ 2)) / shp_area)
+                  ) 
+         
+               source <- filter(source, HabBroad %in% c("Water"), shp_area < 10000, shp_index <= 5)
+               
+               } else if (habitat == "mire"){
+                  source <- filter(source, HabBroad %in% c("Grassland, Marshy", "Mire", "Swamp", "Saltmarsh"))
+                  
+                  } else if (habitat == "wetland"){
+                     source <- filter(source, HabBroad %in% c("Grassland, marshy"))
+                     }
+
+   
 
    # Check geometry as needs to be clean for rasterizing
    source <- ecoservR::checkgeometry(source, "POLYGON")

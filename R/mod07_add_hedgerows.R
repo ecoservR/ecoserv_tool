@@ -72,7 +72,7 @@ add_hedgerows <- function(mm = parent.frame()$mm,
 
       SAgrid <- ecoservR::grid_study(studyAreaBuffer) # create grid
       hedge <- lapply(SAgrid, function(x)  # tile hedges
-         sf::st_intersection(hedge, st_geometry(x)) %>%
+         sf::st_intersection(hedge, sf::st_geometry(x)) %>%
             ecoservR::checkgeometry(.) %>%
             sf::st_as_sf())
 
