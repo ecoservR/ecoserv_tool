@@ -130,15 +130,13 @@ create_network <- function(x = parent.frame()$mm,
             source <- filter(source, HabBroad %in% c("Heathland"))
             } else if (habitat == "pond"){
       
-               ## Calculate shp_area and shp_index
-      
-               source <- source %>% mutate(
-                  shp_area = as.numeric(st_area(.)),
-                  shp_length = as.numeric(lwgeom::st_perimeter(.))) %>%
-                  # calculate shape index
-                  dplyr::mutate(
-                     shp_index = (pi * ((shp_length / (2 * pi)) ^ 2)) / shp_area)
-                  ) 
+## Calculate shp_area and shp_index
+
+source <- source %>% 
+   dplyr::mutate(shp_area = as.numeric(sf::st_area(.)),
+          shp_length = as.numeric(lwgeom::st_perimeter(.))) %>%
+   dplyr::mutate( # calculate shape index
+      shp_index = (pi * ((shp_length / (2 * pi)) ^ 2)) / shp_area)
          
                source <- filter(source, HabBroad %in% c("Water"), shp_area < 10000, shp_index <= 5)
                
