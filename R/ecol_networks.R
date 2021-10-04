@@ -114,40 +114,45 @@ create_network <- function(x = parent.frame()$mm,
 
 
    message("Identifying source habitats for ", habitat)
+
    # Identify patches of source habitat
 
+   if (habitat == "pond"){
+      source <- x
+      } else {
    source <- x[x[[costcol]] == 1, ]
+      }
 
    ## Refine further, as cost of 1 is not necessarily the target habitat
 
    #### TO DO: CONDITIONAL FILTERING BY HABITAT HERE; ESP FOR POND, MIRE AND LWET
 
    if (habitat == "woodland"){
-      source <- filter(source, HabBroad %in% c("Woodland, broadleaved", "Woodland, mixed"))
+      source <- dplyr::filter(source, HabBroad %in% c("Woodland, broadleaved", "Woodland, mixed"))
       } else if (habitat == "grassland"){
-         source <- filter(source, HabBroad %in% c("Grassland, semi-natural", "Maritime cliff and slope"))
+         source <- dplyr::filter(source, HabBroad %in% c("Grassland, semi-natural", "Maritime cliff and slope"))
          } else if (habitat == "heath"){
-            source <- filter(source, HabBroad %in% c("Heathland"))
+            source <- dplyr::filter(source, HabBroad %in% c("Heathland"))
             } else if (habitat == "pond"){
-      
+
 ## Calculate shp_area and shp_index
 
-source <- source %>% 
+source <- source %>%
    dplyr::mutate(shp_area = as.numeric(sf::st_area(.)),
           shp_length = as.numeric(lwgeom::st_perimeter(.))) %>%
    dplyr::mutate( # calculate shape index
       shp_index = (pi * ((shp_length / (2 * pi)) ^ 2)) / shp_area)
-         
-               source <- filter(source, HabBroad %in% c("Water"), shp_area < 10000, shp_index <= 5)
-               
+
+               source <- dplyr::filter(source, HabBroad %in% c("Water, fresh"), shp_area < 10000, shp_index <= 5)
+
                } else if (habitat == "mire"){
-                  source <- filter(source, HabBroad %in% c("Grassland, Marshy", "Mire", "Swamp", "Saltmarsh"))
-                  
+                  source <- dplyr::filter(source, HabBroad %in% c("Grassland, Marshy", "Mire", "Swamp", "Saltmarsh"))
+
                   } else if (habitat == "wetland"){
-                     source <- filter(source, HabBroad %in% c("Grassland, marshy"))
+                     source <- dplyr::filter(source, HabBroad %in% c("Grassland, marshy"))
                      }
 
-   
+
 
    # Check geometry as needs to be clean for rasterizing
    source <- ecoservR::checkgeometry(source, "POLYGON")
