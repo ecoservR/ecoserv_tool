@@ -142,7 +142,8 @@ calculateDistances <- function(r){
 
    # convert to spatstat point object with marks (habitat or no)
 
-   points <- spatstat.geom::as.ppp(raster::rasterToPoints(r, spatial = TRUE))   # a ppp objects with marks 8888 (non) or 1 (habitat)
+   #points <- spatstat.geom::as.ppp(raster::rasterToPoints(r, spatial = TRUE))   # a ppp objects with marks 8888 (non) or 1 (habitat)
+   points <- as(raster::rasterToPoints(r, spatial = TRUE), "ppp")  # fix bug that occurred Sept2021
    plist <- spatstat.geom::split.ppp(points, f = as.factor(points$marks)) # split them
    pointsHab <- plist[[1]]  # the habitat points
    pointsNon <- plist[[2]]  # the 8888 (non habitat) points
