@@ -299,6 +299,7 @@ get_final_map <- function(folder = NULL, filename = "final.RDS"){
 
    accessnat <- c("Group", "GI", "GIpublic")
 
+
    if (isFALSE(all(accessnat %in% names(mm)))){
       message("Warning: you will not be able to run the Access to Nature capacity model without the attribute(s) ",
               paste0(accessnat[!accessnat %in% names(mm)], collapse = " & ")
@@ -313,10 +314,17 @@ get_final_map <- function(folder = NULL, filename = "final.RDS"){
       )
    }
 
+   airdemand <- c("Make", "Theme")
+
+   if (isFALSE(all(airdemand %in% names(mm)))){
+      message("Warning: you will not be able to run air purification demand model without the attribute(s) ",
+              paste0(airdemand[!airdemand %in% names(mm)], collapse = " & ")
+      )
+   }
 
    ### Keep only required attributes and drop rest from mm for faster processing
 
-   mm <- mm[,intersect(c("HabCode_B", accessnat, demandattr, "elev"), names(mm))]
+   mm <- mm[,intersect(c("HabCode_B", accessnat, demandattr, airdemand, "elev"), names(mm))]
 
    message("Ready to map ecosystem services.")
 
