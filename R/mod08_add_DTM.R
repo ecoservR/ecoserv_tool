@@ -84,9 +84,11 @@ add_DTM <- function(mm = parent.frame()$mm,
 
          # Create the dtm tiles for each 10x10km square in study area, and save to temporary folder defined previously
          for (i in 1:length(dtm_tiles)){
-            dtm_tiles[[i]] <- raster::crop(dtm[[1]], gridSA[gridSA$TILE_NAME == names(dtm_tiles)[[i]],],
-                                           filename = file.path(scratch_path, paste("dtm_tile", i, sep = "")),
-                                           overwrite = TRUE)
+            ## wrapping in writeraster rather than using filename= in crop due to bug with dataType FLT4S
+            dtm_tiles[[i]] <- raster::writeRaster(
+               raster::crop(dtm[[1]], gridSA[gridSA$TILE_NAME == names(dtm_tiles)[[i]],]),
+               filename = file.path(scratch_path, paste("dtm_tile", i, sep = "")),
+               overwrite = TRUE)
 
          }
 
