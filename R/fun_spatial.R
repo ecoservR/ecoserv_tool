@@ -165,6 +165,102 @@ calculateDistances <- function(r){
 
 
 
+# Generate distance raster from source object(s) --------------------------
+
+#' Distance from Source
+#'
+#' Generate a raster of distances from source(s), restricted to a maximum search distance.
+#' #' @param x the source object(s), as sf polygons
+#' @param r a template raster of the desired extent and resolution
+#' @param feature feature name for informative messages
+#' @param maxdist distance (m) past which the source is considered not to have an effect
+
+#' @return a raster where cell values are distance in meters from sources (which have values of 0)
+#' @export
+
+distance_from_source  <- function(x, r, feature, maxdist){
+
+   testbox <- sf::st_as_sf(as(raster::extent(r),"SpatialPolygons")) %>%
+      sf::st_set_crs(27700)  # creating polygon of the extent of the raster, to check that features are present within
+
+
+   if (nrow(x) > 0 &   # only if the feature has observations in the study area
+       lengths(sf::st_intersects(testbox, x))  # checks that there's at least 1 observation in extent of the raster template (notice that function is lengths, not length)
+   ) {
+
+      ### Rasterize the noise source
+
+      xr <- fasterize::fasterize(x, r, field = NULL, background = 8888) # rasterize them, using 8888 as NA flag
+
+
+      ### Buffer and simplify the polygon features to use as mask in dist calculation
+
+      x <- sf::st_buffer(x, maxdist) %>% sf::st_union() %>% sf::st_sf()
+
+      ### Calculate distances
+
+      # Mask raster by the max distance search window
+
+      xr <- raster::mask(xr, x)
+
+      # Do the distance calculation
+      xr <- calculateDistances(xr)
+
+
+      # Because Euclidean distances can still be slightly greater than the size of the buffer,
+      # we set all distances above threshold to NA
+      xr <- raster::reclassify(xr, rcl = c(maxdist, Inf, NA))
+
+
+      return(xr)
+
+      # IF THE FEATURE IS EMPTY (no occurence in study area)
+   } else {
+      xr <- r
+   }   # save NA raster if no observations
+
+   return(xr)
+}
+
+
+
+# Rescale indicators ------------------------------------------------------
+
+#' Rescale Indicator
+#'
+#' Converts a score raster (usually a demand indicator) to z-scores (mean-centered and variance-scaled) and rescales them 0-1.
+
+#' @param r a RasterLayer with values to transform
+#' @return the raster with standardised and rescaled values
+#' @export
+
+rescale_indicator <- function(r){
+
+
+   ## turn raster into zscores
+
+   rz <- raster::scale(r, center = TRUE, scale = TRUE)
+
+
+   minval <- raster::cellStats(rz, min) # get minimum value
+
+   if (minval < 0) {
+      rz <- rz + abs(minval)  # make sure all values are positive before creating index
+
+      maxval <- raster::cellStats(rz, max)
+      rz <- rz/maxval
+
+   } else {
+      maxval <- raster::cellStats(rz, max)
+      rz <- rz/maxval
+
+   }
+
+   return(rz)
+
+}
+
+
 # Rename geometry column --------------------------------------------------
 
 #' Rename geometry column
