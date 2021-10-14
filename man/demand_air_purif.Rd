@@ -19,7 +19,7 @@ demand_air_purif(
 )
 }
 \arguments{
-\item{x}{A basemap, in a list of sf tiles or as one sf object. Must have attributes "HabCode_B", "Make", "Theme", "housePop", "health".}
+\item{x}{A basemap, in a list of sf tiles or as one sf object. Must have attributes "HabCode_B", "housePop", "health".}
 
 \item{studyArea}{The boundaries of the site, as one sf object. The final raster will be masked to this shape. For best results this shape should be smaller than the basemap (which should be buffered by typically 300 m - 1km to avoid edge effects).}
 

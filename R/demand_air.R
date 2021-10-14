@@ -8,7 +8,7 @@
 #'
 #' Runs the air purification ecosystem service model, generating demand scores based on four indicators: distance to major roads, proportion of manmade surfaces, population, and health. (Specific indicators can be omitted by setting the appropriate weight to 0.)
 
-#' @param x A basemap, in a list of sf tiles or as one sf object. Must have attributes "HabCode_B", "Make", "Theme", "housePop", "health".
+#' @param x A basemap, in a list of sf tiles or as one sf object. Must have attributes "HabCode_B", "housePop", "health".
 #' @param studyArea The boundaries of the site, as one sf object. The final raster will be masked to this shape. For best results this shape should be smaller than the basemap (which should be buffered by typically 300 m - 1km to avoid edge effects).
 #' @param res Desired resolution of the raster. Default is 5 m. Range recommended is 5-10m.
 #' @param local Radius (m) for focal statistics at local range. Default is 300 m.
@@ -102,7 +102,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
    }
 
    # Set the attributes we need for processing
-   attributes <- c("HabCode_B", "Make", "Theme", "housePop", "health")
+   attributes <- c("HabCode_B", "housePop", "health")
 
    # Are any attributes missing?
    if (any(!attributes %in% names(x))){
@@ -117,6 +117,12 @@ demand_air_purif <- function(x = parent.frame()$mm,
 
    # Keep only fields we need
    x <- x[attributes]
+
+   # join HabClass
+
+   x <- dplyr::left_join(x, ecoservR::hab_lookup[, c("Ph1code", "HabClass")],
+                         by = c("HabCode_B" = "Ph1code"))
+
 
    # Check that the study area is in the right projection (OS national grid). If not it will be transformed, and in either case we then force it to avoid GDAL system-specific "no colon in init string" error
    studyArea <- suppressWarnings({
@@ -228,7 +234,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
    if (indicators){
       roadscore <- raster::writeRaster(roadscore,
                                        filename = file.path(indicator_path,
-                                                            paste(runtitle, "air_purif_dist_to_road_indic.tif", sep="_")),
+                                                            paste(projectLog$title.runtitle, "air_purif_dist_to_road_indic.tif", sep="_")),
                                        overwrite = TRUE)
 
       message("Road distance indicator saved.")
@@ -267,7 +273,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
    # Proportion (%) of man‐made surface within search distance- higher proportions are correlated with higher air pollution
 
    # Subset the basemap
-   manmade <- dplyr::filter(x, Make %in% c("Manmade", "Multiple") & !Theme %in% c("Land", "Water"))
+      manmade <- dplyr::filter(x, HabClass %in% c("Urban", "Infrastructure"))
 
    # Make sure we're dealing with polygons
    manmade <- checkgeometry(manmade, "POLYGON")
@@ -305,7 +311,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
    if (indicators){
       raster::writeRaster(manmadescore,
                           filename = file.path(indicator_path,
-                                               paste(runtitle, "air_purif_manmade_indic.tif", sep="_")),
+                                               paste(projectLog$title, runtitle, "air_purif_manmade_indic.tif", sep="_")),
                           overwrite = TRUE)
 
       message("Manmade surfaces indicator saved.")
@@ -365,7 +371,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
 
    if (indicators){
       raster::writeRaster(popscore, file.path(indicator_path,   # we define the path
-                                              paste0(runtitle, "_air_purif_pop_indic.tif")),
+                                              paste(projectLog$title,runtitle, "air_purif_pop_indic.tif", sep = "_")),
                           overwrite = TRUE)
    }
 
@@ -407,7 +413,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
 
    if (indicators){
       raster::writeRaster(healthscore, file.path(indicator_path,   # we define the path
-                                              paste0(runtitle, "_air_purif_health_indic.tif")),
+                                              paste(projectLog$title, runtitle, "air_purif_health_indic.tif", sep = "_")),
                           overwrite = TRUE)
    }
 
@@ -454,9 +460,9 @@ demand_air_purif <- function(x = parent.frame()$mm,
    message("Saving final scores.")
 
    raster::writeRaster(final,
-                       filename = file.path(save, paste(runtitle,
-                                                        "_air_purif_demand.tif",
-                                                        sep="")),
+                       filename = file.path(save, paste(projectLog$title, runtitle,
+                                                        "air_purif_demand.tif",
+                                                        sep="_")),
                        overwrite = TRUE)
 
    ## and a rescaled version
@@ -464,8 +470,8 @@ demand_air_purif <- function(x = parent.frame()$mm,
    maxvalue <- max(raster::values(final), na.rm = TRUE)
 
    raster::writeRaster(final/maxvalue *100,
-                       filename = file.path(save, paste(runtitle,
-                                                        "_air_purif_demand_rescaled.tif", sep="")),
+                       filename = file.path(save, paste(projectLog$title, runtitle,
+                                                        "air_purif_demand_rescaled.tif", sep="_")),
                        overwrite = TRUE)
 
 
