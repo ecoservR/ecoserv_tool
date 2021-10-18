@@ -29,7 +29,7 @@ demand_air_purif(
 
 \item{openroads}{Path to the folder containing OS Open Roads data or other (linestring) road classification to use as source of pollution.}
 
-\item{roadClassification}{The attribute name in OS Open Roads containing the classification of road types, default "roadClassification". Only "Motorway" and "A road" types are selected for analysis.}
+\item{roadClassification}{The attribute name in OS Open Roads containing the classification of road types, default "roadClassification". Only "Motorway" and "A Road" types are selected for analysis. (If using custom road network, please ensure classification matches these terms exactly.)}
 
 \item{indicators}{Logical; should raw indicators (before transformation into z-scores and rescaling) be saved to the project folder? Default TRUE.}
 
