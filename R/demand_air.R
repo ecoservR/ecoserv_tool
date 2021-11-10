@@ -140,7 +140,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
    r <- raster::raster()  # create empty raster
    raster::crs(r) <- sp::CRS(SRS_string = "EPSG:27700") # hard-coding datum to preserve CRS
    raster::extent(r) <- raster::extent(x)  # set same extent as the shapefile
-   raster::res(r) <- res  # set resolution of 2 meters
+   raster::res(r) <- res  # set resolution
 
 
    # Indicator 1: distance to roads ------------------------------------------
