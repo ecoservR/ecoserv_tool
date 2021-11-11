@@ -17,6 +17,8 @@
 
 #test <- list.files(system.file("extdata/IMD", package = "ecoservR"))
 
+## MAJOR UPDATE Nov 2021: the extraction process was assigning the health values randomly across houses in each tile! Now fixed to order by TOID so this does not happen
+
 
 #' Add socio-economic data
 #'
@@ -81,7 +83,8 @@ add_socioeco <- function(mm = parent.frame()$mm,
    houses <- lapply(mm, function(x) which(x$HabCode_B == "J360"))
 
    # Create their centroids as simple point data (if no house in a tile, returns empty geometry)
-   centro <- mapply(function(x,y) sf::st_centroid(sf::st_geometry(x[y,])) %>% sf::st_as_sf(),
+   centro <- mapply(function(x,y) sf::st_centroid(dplyr::select(x[y,], TOID)) %>%  # keeping toid so we can match to mm later
+                       sf::st_as_sf(),
                     x = mm,
                     y = houses,
                     SIMPLIFY = FALSE)
@@ -117,13 +120,21 @@ add_socioeco <- function(mm = parent.frame()$mm,
       # we need to add an extra subsetting index to not be caught out by extraction of different lengths
       within_imd <- lengths(st_intersects(centro[[i]], imd)) > 0
 
+      ## this version yielded values that couldn't be matched in order to the data
+      # vals <- suppressWarnings({
+      #    sf::st_intersection(centro[[i]][within_imd,], imd)$health
+      # })
+
+      ## New solution creates dataframe rather than vector, so later can order by toid
       vals <- suppressWarnings({
-         sf::st_intersection(centro[[i]][within_imd,], imd)$health
+         sf::st_intersection(centro[[i]][within_imd,], imd) %>%   # gets the health data from imd polygons
+         sf::st_drop_geometry()  # drops geom so we only deal with toid and health score
       })
 
-      # add values into mm tile using indexing (only to the houses that actually had an intersection with IMD)
+      # add values into mm tile using indexing (only to the houses that actually had an intersection with IMD),
+      # AND ordered by TOID on both sides so we get a perfect match
 
-      mm[[i]][houses[[i]][within_imd], ][["health"]] <- vals
+      mm[[i]][houses[[i]][within_imd], ][order(mm[[i]][houses[[i]][within_imd], ]$TOID),][["health"]] <- vals[order(vals$TOID), ]$health
 
    }
 
@@ -159,14 +170,22 @@ add_socioeco <- function(mm = parent.frame()$mm,
       # we need to add an extra subsetting index to not be caught out by extraction of different lengths
       within_census <- lengths(st_intersects(centro[[i]], census)) > 0
 
+
+      ## old way
+      # vals <- suppressWarnings({
+      #    sf::st_intersection(centro[[i]][within_census,], census)
+      # })
+
+      ## New solution creates dataframe rather than vector, so later can order by toid
       vals <- suppressWarnings({
-         sf::st_intersection(centro[[i]][within_census,], census)
+         sf::st_intersection(centro[[i]][within_census,], census) %>%   # gets therisk and housepop data from census polygons
+            sf::st_drop_geometry()  # drops geom so we only deal with toid and health score
       })
 
       # add values into mm tile using indexing
 
-      mm[[i]][houses[[i]][within_census], ][["riskgroup"]] <- vals$riskgroup
-      mm[[i]][houses[[i]][within_census], ][["housePop"]] <- vals$housePop
+      mm[[i]][houses[[i]][within_census], ][order(mm[[i]][houses[[i]][within_census], ]$TOID),][["riskgroup"]] <- vals[order(vals$TOID), ]$riskgroup
+      mm[[i]][houses[[i]][within_census], ][order(mm[[i]][houses[[i]][within_census], ]$TOID),][["housePop"]] <- vals[order(vals$TOID), ]$housePop
 
    }
 
