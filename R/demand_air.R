@@ -234,7 +234,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
    if (indicators){
       roadscore <- raster::writeRaster(roadscore,
                                        filename = file.path(indicator_path,
-                                                            paste(projectLog$title.runtitle, "air_purif_dist_to_road_indic.tif", sep="_")),
+                                                            paste(projectLog$title,runtitle, "air_purif_dist_to_road_indic.tif", sep="_")),
                                        overwrite = TRUE)
 
       message("Road distance indicator saved.")
