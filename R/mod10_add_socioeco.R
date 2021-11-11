@@ -118,7 +118,7 @@ add_socioeco <- function(mm = parent.frame()$mm,
 
       # there is a problem where some house points fall outside of the extracted IMD (on margins of study area)
       # we need to add an extra subsetting index to not be caught out by extraction of different lengths
-      within_imd <- lengths(st_intersects(centro[[i]], imd)) > 0
+      within_imd <- lengths(sf::st_intersects(centro[[i]], imd)) > 0
 
       ## this version yielded values that couldn't be matched in order to the data
       # vals <- suppressWarnings({
@@ -168,7 +168,7 @@ add_socioeco <- function(mm = parent.frame()$mm,
 
       # there is a problem where some house points fall outside of the extracted data (on margins of study area)
       # we need to add an extra subsetting index to not be caught out by extraction of different lengths
-      within_census <- lengths(st_intersects(centro[[i]], census)) > 0
+      within_census <- lengths(sf::st_intersects(centro[[i]], census)) > 0
 
 
       ## old way
