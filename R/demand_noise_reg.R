@@ -35,7 +35,8 @@
 #' @return Two rasters with demand scores: one with raw scores (arbitrary units), and one rescaled 0-100 (where 100 is maximum demand for the area).
 #' @export
 #'
-demand_noise_reg <- function(x, studyArea,
+demand_noise_reg <- function(x = parent.frame()$mm,
+                             studyArea = parent.frame()$studyArea,
                         res = 5,
                         local = 300,
                         indicators = TRUE,
@@ -193,7 +194,7 @@ demand_noise_reg <- function(x, studyArea,
       checkgeometry()
 
 
-   rails <- rails %>%
+   railways <- railways %>%
       sf::st_buffer(5) %>%
       checkgeometry()
 
@@ -207,11 +208,11 @@ demand_noise_reg <- function(x, studyArea,
    # calculate distance to noise sources, writing resulting rasters to scratch folder:
    # here the maxdist argument could become a reactive argument defined by thresholds from the defra noise dataset
 
-   dist_motor <- processNoiseSource(motorways, r, "motorways", 2000)
-   dist_roadsA <- processNoiseSource(roadsA, r, "roadsA", 150)
-   dist_dualcarriageways <- processNoiseSource(dualcarriageways, r, "dualcarriageways", 400)
-   dist_rail <- processNoiseSource(rails, r, "railways", 200)
-   dist_air <- processNoiseSource(airports, r, "airports", 3000)
+   dist_motor <- distance_from_source(motorways, r, "motorways", 2000)
+   dist_roadsA <- distance_from_source(roadsA, r, "roadsA", 150)
+   dist_dualcarriageways <- distance_from_source(dualcarriageways, r, "dualcarriageways", 400)
+   dist_rail <- distance_from_source(railways, r, "railways", 200)
+   dist_air <- distance_from_source(airports, r, "airports", 3000)
 
 
    ### TO DO: REVISE DISTANCES SET ABOVE AND BELOW (THRESHOLDS FOR EACH SOURCE)
@@ -243,7 +244,7 @@ demand_noise_reg <- function(x, studyArea,
    if (indicators){
       distancescore <- raster::writeRaster(distancescore,
                                        filename = file.path(indicator_path,
-                                                            paste(projectLog$title.runtitle, "noise_reg_dist_to_noise_indic.tif", sep="_")),
+                                                            paste(projectLog$title,runtitle, "noise_reg_dist_to_noise_indic.tif", sep="_")),
                                        overwrite = TRUE)
 
       message("Distance to noise sources indicator saved.")
