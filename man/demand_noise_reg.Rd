@@ -5,9 +5,11 @@
 \title{Noise Regulation Demand Model}
 \usage{
 demand_noise_reg(
-  x,
-  studyArea,
+  x = parent.frame()$mm,
+  studyArea = parent.frame()$studyArea,
   res = 5,
+  distances = c(motorway = 800, dual = 600, primary = 550, railway = 650, airport =
+    1500),
   local = 300,
   indicators = TRUE,
   indic_weights = c(1, 0.5, 0.5),
@@ -22,6 +24,8 @@ demand_noise_reg(
 \item{studyArea}{The boundaries of the site, as one sf object. The final raster will be masked to this shape. For best results this shape should be smaller than the basemap (which should be buffered by typically 300 m - 1km to avoid edge effects).}
 
 \item{res}{Desired resolution of the raster. Default is 5 m. Range recommended is 5-10m.}
+
+\item{distances}{Distance threshold (in meters) for noise attenuation for the noise sources: motorways, dual carriageways, primary roads, railways, and airports. Must be a named vector of numeric values in meters; defaults to c("motorway" = 800,"dual" = 600,"primary" = 550,"railway" = 650,"airport" = 1500). Defra's Strategic Noise Mapping (https://www.gov.uk/government/publications/strategic-noise-mapping-2019) may help set sensible defaults.}
 
 \item{local}{Radius (m) for focal statistics at local range. Default is 300 m.}
 

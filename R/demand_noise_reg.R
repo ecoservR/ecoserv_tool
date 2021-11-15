@@ -26,6 +26,7 @@
 #' @param x A basemap, in a list of sf tiles or as one sf object. Must have attributes "HabCode_B", "housePop", "health".
 #' @param studyArea The boundaries of the site, as one sf object. The final raster will be masked to this shape. For best results this shape should be smaller than the basemap (which should be buffered by typically 300 m - 1km to avoid edge effects).
 #' @param res Desired resolution of the raster. Default is 5 m. Range recommended is 5-10m.
+#' @param distances Distance threshold (in meters) for noise attenuation for the noise sources: motorways, dual carriageways, primary roads, railways, and airports. Must be a named vector of numeric values in meters; defaults to c("motorway" = 800,"dual" = 600,"primary" = 550,"railway" = 650,"airport" = 1500). Defra's Strategic Noise Mapping (https://www.gov.uk/government/publications/strategic-noise-mapping-2019) may help set sensible defaults.
 #' @param local Radius (m) for focal statistics at local range. Default is 300 m.
 #' @param indicators Logical; should raw indicators (before transformation into z-scores and rescaling) be saved to the project folder? Default TRUE.
 #' @param indic_weights A numeric vector of length 3, with weights for distance to roads, population and health, respectively. Default to c(1, 0.5, 0.5) so that population and health combined has equal weight to noise sources.
@@ -37,13 +38,20 @@
 #'
 demand_noise_reg <- function(x = parent.frame()$mm,
                              studyArea = parent.frame()$studyArea,
-                        res = 5,
-                        local = 300,
-                        indicators = TRUE,
-                        indic_weights = c(1, 0.5, 0.5),
-                        projectLog = parent.frame()$projectLog,
-                        runtitle = parent.frame()$runtitle,
-                        save = NULL){
+                             res = 5,
+                             distances = c(
+                                "motorway" = 800,
+                                "dual" = 600,
+                                "primary" = 550,
+                                "railway" = 650,
+                                "airport" = 1500
+                             ),
+                             local = 300,
+                             indicators = TRUE,
+                             indic_weights = c(1, 0.5, 0.5),
+                             projectLog = parent.frame()$projectLog,
+                             runtitle = parent.frame()$runtitle,
+                             save = NULL){
 
 
    ## Setup  ----
@@ -108,6 +116,15 @@ demand_noise_reg <- function(x = parent.frame()$mm,
    } else stop("Weights must be a numeric vector of length 3 for this model. Please refer to documentation. Specify a weight of 0 if you want to ignore a dataset.")
 
 
+   # Check the distance thresholds
+
+   if (!all(names(distances) == c("motorway", "dual", "primary", "railway", "airport")) | !is.numeric(distances)){
+      stop("Distance thresholds set incorrectly. Must be a named vector: make sure that names match documentation. Alternatively remove the argument to use default settings.")
+
+   }
+
+
+
    # if mm is stored in list, combine all before proceeding
    if (isTRUE(class(x) == "list")){
       x <- do.call(rbind, x) %>% st_as_sf()
@@ -142,117 +159,115 @@ demand_noise_reg <- function(x = parent.frame()$mm,
    raster::res(r) <- res  # set resolution
 
 
-
    ################################# DISTANCE RASTER ##############################
 
    if (indic_weights[1] > 0){  # only if user wants this indicator
 
-   # NOTE - Higher scores here mean an area is further from a noise source, so scores are inverted to mean that higher
-   # scores represent greater need for noise regulation
+      # NOTE - Higher scores here mean an area is further from a noise source, so scores are inverted to mean that higher
+      # scores represent greater need for noise regulation
 
-   message("Importing noise sources (OS VectorMap) from EcoservR")
-
-
-   ##### Importing OS VectorMap data #####
-
-   airports <- readRDS(system.file("extdata/vectormap/airports.RDS", package = "ecoservR"))
-   railways <- readRDS(system.file("extdata/vectormap/railways.RDS", package = "ecoservR"))
-   roads <- readRDS(system.file("extdata/vectormap/roads.RDS", package = "ecoservR"))
+      message("Importing noise sources (OS VectorMap) from EcoservR")
 
 
-   #### Clip them to the buffered study area
+      ##### Importing OS VectorMap data #####
 
-   airports <- sf::st_intersection(airports, SAbuffer)
-   railways <- sf::st_intersection(railways, SAbuffer)
-   roads <- sf::st_intersection(roads, SAbuffer)
-
-
-   ##### Subsetting roads and buffering sources #####
-
-   # Create layers for noise sources
-   # (ONLY if there are occurrences in the study area, otherwise create empty raster)
-
-   message("Preparing VectorMap data for noise distance analysis")
-
-   motorways <- dplyr::filter(roads, classification == "Motorway") %>% # subset of roads that are motorways
-      sf::st_buffer(15) %>%
-      checkgeometry()  # buffer and convert to polygon
+      airports <- readRDS(system.file("extdata/vectormap/airports.RDS", package = "ecoservR"))
+      railways <- readRDS(system.file("extdata/vectormap/railways.RDS", package = "ecoservR"))
+      roads <- readRDS(system.file("extdata/vectormap/roads.RDS", package = "ecoservR"))
 
 
-   dualcarriageways <- dplyr::filter(roads, classification == "A Road") %>% # subset of roads that are motorways
-      sf::st_buffer(5) %>%
-      checkgeometry()  # buffer and convert to polygon
+      #### Clip them to the buffered study area
+
+      airports <- sf::st_intersection(airports, SAbuffer)
+      railways <- sf::st_intersection(railways, SAbuffer)
+      roads <- sf::st_intersection(roads, SAbuffer)
 
 
-   roadsA <- filter(roads, classification == "Minor Road") %>% # subset of A roads
-      sf::st_buffer(5) %>%
-      checkgeometry()  # buffer and convert to polygon
+      ##### Subsetting roads and buffering sources #####
+
+      # Create layers for noise sources
+      # (ONLY if there are occurrences in the study area, otherwise create empty raster)
+
+      message("Preparing VectorMap data for noise distance analysis")
+
+      motorways <- dplyr::filter(roads, classification == "Motorway") %>% # subset of roads that are motorways
+         sf::st_buffer(15) %>%
+         checkgeometry()  # buffer and convert to polygon
 
 
-   airports <- airports %>%
-      sf::st_buffer(500) %>%
-      checkgeometry()
+      dualcarriageways <- dplyr::filter(roads, classification == "A Road") %>% # subset of roads that are dual carriageways
+         sf::st_buffer(5) %>%
+         checkgeometry()  # buffer and convert to polygon
 
 
-   railways <- railways %>%
-      sf::st_buffer(5) %>%
-      checkgeometry()
+      roadsA <- filter(roads, classification == "Minor Road") %>% # subset of A roads
+         sf::st_buffer(5) %>%
+         checkgeometry()  # buffer and convert to polygon
 
 
-   ##### 4 - Calculating noise source distances #####
-
-   message("Creating noise distance raster (indicator 1 of 3)")
-
-
-
-   # calculate distance to noise sources, writing resulting rasters to scratch folder:
-   # here the maxdist argument could become a reactive argument defined by thresholds from the defra noise dataset
-
-   dist_motor <- distance_from_source(motorways, r, "motorways", 2000)
-   dist_roadsA <- distance_from_source(roadsA, r, "roadsA", 150)
-   dist_dualcarriageways <- distance_from_source(dualcarriageways, r, "dualcarriageways", 400)
-   dist_rail <- distance_from_source(railways, r, "railways", 200)
-   dist_air <- distance_from_source(airports, r, "airports", 3000)
+      airports <- airports %>%
+         sf::st_buffer(500) %>%
+         checkgeometry()
 
 
-   ### TO DO: REVISE DISTANCES SET ABOVE AND BELOW (THRESHOLDS FOR EACH SOURCE)
-
-   ## This was actual distances but the score must be inversely proportional.
-   ## From ecoservGIS:converted to log10 score and then to inverse score
-
-
-   dist_motor <- 1 - (log10(dist_motor + 1) / log10(2000))
-   dist_roadsA <- 1 - (log10(dist_roadsA + 1) / log10(150))
-   dist_dualcarriageways <- 1 - (log10(dist_dualcarriageways + 1) / log10(400))
-   dist_rail <- 1 - (log10(dist_rail + 1) / log10(200))
-   dist_air <- 1 - (log10(dist_air + 1) / log10(3000))
+      railways <- railways %>%
+         sf::st_buffer(5) %>%
+         checkgeometry()
 
 
-   ##### 5 - Summing distance rasters #####
+      ##### 4 - Calculating noise source distances #####
 
-   # Sum rasters:
-   distances <- raster::brick(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)  # stack rasters
-   rm(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)
-
-   distancescore <- raster::calc(distances, fun = sum, na.rm = TRUE)  #sum scores
-
-   # score could be slightly negative (precision), so forcing to zero
-   distancescore[distancescore < 0] <- 0
+      message("Creating noise distance raster (indicator 1 of 3)")
 
 
-   # save raw indicator
-   if (indicators){
-      distancescore <- raster::writeRaster(distancescore,
-                                       filename = file.path(indicator_path,
-                                                            paste(projectLog$title,runtitle, "noise_reg_dist_to_noise_indic.tif", sep="_")),
-                                       overwrite = TRUE)
+      # calculate distance to noise sources, writing resulting rasters to scratch folder:
+      # here the maxdist argument could become a reactive argument defined by thresholds from the defra noise dataset
 
-      message("Distance to noise sources indicator saved.")
-   }
-
+      dist_motor <- distance_from_source(motorways, r, "motorways", distances[["motorway"]])
+      dist_roadsA <- distance_from_source(roadsA, r, "roadsA", distances[["primary"]])
+      dist_dualcarriageways <- distance_from_source(dualcarriageways, r, "dualcarriageways", distances[["dual"]])
+      dist_rail <- distance_from_source(railways, r, "railways", distances[["railway"]])
+      dist_air <- distance_from_source(airports, r, "airports", distances[["airport"]])
 
 
-   rm(airports, motorways, railways, roads, roadsA, dualcarriageways)
+      ### TO DO: REVISE DISTANCES SET ABOVE AND BELOW (THRESHOLDS FOR EACH SOURCE)
+
+      ## This was actual distances but the score must be inversely proportional.
+      ## From ecoservGIS:converted to log10 score and then to inverse score
+      # also added check because there might not be any features of a kind, and empty raster causes error in calculation
+
+      dist_motor <- if (raster::hasValues(dist_motor)){1 - (log10(dist_motor + 1) / log10(distances[["motorway"]]))} else {r}
+      dist_roadsA <- if (raster::hasValues(dist_roadsA)){1 - (log10(dist_roadsA + 1) / log10(distances[["primary"]]))} else {r}
+      dist_dualcarriageways <- if (raster::hasValues(dist_dualcarriageways)){1 - (log10(dist_dualcarriageways + 1) / log10(distances[["dual"]]))} else {r}
+      dist_rail <- if (raster::hasValues(dist_rail)){1 - (log10(dist_rail + 1) / log10(distances[["railway"]]))} else {r}
+      dist_air <- if (raster::hasValues(dist_air)){1 - (log10(dist_air + 1) / log10(distances[["airport"]]))} else {r}
+
+
+      ##### 5 - Summing distance rasters #####
+
+      # Sum rasters:
+      distances <- raster::brick(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)  # stack rasters
+      rm(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)
+
+      distancescore <- raster::calc(distances, fun = sum, na.rm = TRUE)  #sum scores
+
+      # score could be slightly negative (precision), so forcing to zero
+      distancescore[distancescore < 0] <- 0
+
+
+      # save raw indicator
+      if (indicators){
+         distancescore <- raster::writeRaster(distancescore,
+                                              filename = file.path(indicator_path,
+                                                                   paste(projectLog$title,runtitle, "noise_reg_dist_to_noise_indic.tif", sep="_")),
+                                              overwrite = TRUE)
+
+         message("Distance to noise sources indicator saved.")
+      }
+
+
+
+      rm(airports, motorways, railways, roads, roadsA, dualcarriageways)
 
 
 
@@ -261,6 +276,22 @@ demand_noise_reg <- function(x = parent.frame()$mm,
       distancescore <- r  # if user wishes to omit this indicator we create empty raster
    }
 
+
+
+   ### POP AND/OR HEALTH
+   ## If at least the pop and/or health indicators are selected (non-zero weights), create the houses
+
+   if (indic_weights[2] > 0 | indic_weights[3] > 0){
+
+      # Create the spatial points with socioeconomic data for each household
+      # We can't go straight from polygon to raster, because then a big house that spans two raster cells would
+      # have its population counted twice. By converting to points first, we make sure that each house is only represented once. If more than house house falls within a raster cell, their population gets summed.
+
+      houses <- dplyr::filter(x, HabCode_B == "J360") %>%   # filter houses from basemap
+         checkgeometry("POLYGON") %>%  # need to be single-part before converting to centro
+         sf::st_centroid()  # get the centroid of each house
+
+   }
 
 
    # Population raster -------------------------------------------------------
@@ -272,15 +303,6 @@ demand_noise_reg <- function(x = parent.frame()$mm,
       # NOTE - Higher population scores mean there is more societal need
 
       message("INDICATOR 2 of 3: population density")
-
-      # Create the spatial points with socioeconomic data for each household
-      # We can't go straight from polygon to raster, because then a big house that spans two raster cells would
-      # have its population counted twice. By converting to points first, we make sure that each house is only represented once. If more than house house falls within a raster cell, their population gets summed.
-
-
-      houses <- dplyr::filter(x, HabCode_B == "J360") %>%   # filter houses from basemap
-         checkgeometry("POLYGON") %>%  # need to be single-part before converting to centro
-         sf::st_centroid()  # get the centroid of each house
 
 
       ## Create the population raster by summing individual house populations in each cell
