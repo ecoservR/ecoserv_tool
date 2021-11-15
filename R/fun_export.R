@@ -72,7 +72,7 @@ message("RDS version saved as ", file.path(final_folder, paste0(title,"_basemap_
 
    ## identify core vs edge tiles
    SAgrid <- ecoservR::grid[
-      lengths(st_intersects(ecoservR::grid, studyArea))>0,]
+      lengths(sf::st_intersects(ecoservR::grid, studyArea))>0,]
    is_core <- unlist(sf::st_contains(studyArea,SAgrid))
 
    ## Clip where necessary
