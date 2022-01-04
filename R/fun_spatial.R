@@ -195,13 +195,15 @@ distance_from_source  <- function(x, r, feature, maxdist){
 
       ### Buffer and simplify the polygon features to use as mask in dist calculation
 
-      x <- sf::st_buffer(x, maxdist) %>% sf::st_union() %>% sf::st_sf()
+      x <- sf::st_buffer(x, maxdist) %>% checkgeometry() ## %>% sf::st_union() %>% sf::st_sf()
+
+      xmask <- fasterize::fasterize(x, r)
 
       ### Calculate distances
 
       # Mask raster by the max distance search window
 
-      xr <- raster::mask(xr, x)
+      xr <- raster::mask(xr, xmask)
 
       # Do the distance calculation
       xr <- calculateDistances(xr)
