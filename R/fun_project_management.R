@@ -236,11 +236,12 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 
 #' @param folder Folder in which the final version of the basemap is saved (by default the "final" subfolder in the project's folder)
 #' @param filename A character string to match to file names in the folder and identify the file to load. Default to "final.RDS"
+#' @param projectLog The project log file which will be used to find the files on disk
 
 #' @export
-get_final_map <- function(folder = NULL, filename = "final.RDS"){
+get_final_map <- function(folder = NULL, filename = "final.RDS", projectLog = parent.frame()$projectLog){
 
-   projectLog <- getProjectLog()  # load project log from working directory
+   #projectLog <- getProjectLog()  # load project log from working directory
 
    # if user specified a different folder to look into (e.g. for intervention map) we will be looking for a file in there, otherwise we set the folder to the "final" subfolder
 
@@ -260,33 +261,33 @@ get_final_map <- function(folder = NULL, filename = "final.RDS"){
    if (length(filelist) == 0) stop("Cannot find your final basemap. Check that a file name containing \"", filename, "\" exists in ", folder , " or set folder and filename arguments as appropriate.")
 
    # Read in the final file
-    mm <- readRDS(latest)
+   mm <- readRDS(latest)
 
-    message("Basemap imported. Importing study area...")
+   message("Basemap imported. Importing study area...")
 
 
    ## Load the study area
 
-    studypath <- projectLog$df[projectLog$df$dataset == "studyArea", ][["path"]]
+   studypath <- projectLog$df[projectLog$df$dataset == "studyArea", ][["path"]]
 
-    ### Import the study area outline (specifying OSGB as crs)
+   ### Import the study area outline (specifying OSGB as crs)
 
-    studyArea <- try(loadSpatial(studypath,
-                                 layer = NULL,
-                                 filetype = guessFiletype(studypath)) %>%
-                        do.call(rbind, .))
+   studyArea <- try(loadSpatial(studypath,
+                                layer = NULL,
+                                filetype = guessFiletype(studypath)) %>%
+                       do.call(rbind, .))
 
-    if (inherits(studyArea, "try-error")) stop("Could not import study area from ", studypath) else message("Study area imported.")
+   if (inherits(studyArea, "try-error")) stop("Could not import study area from ", studypath) else message("Study area imported.")
 
-    studyArea <- suppressWarnings({
-       checkcrs(studyArea, 27700) %>%   # check that CRS is Brit National Grid, and transform if not
-          sf::st_set_crs(., 27700) %>%  # set the crs manually to get rid of GDAL errors with init string format
-          sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf()
-    })
+   studyArea <- suppressWarnings({
+      checkcrs(studyArea, 27700) %>%   # check that CRS is Brit National Grid, and transform if not
+         sf::st_set_crs(., 27700) %>%  # set the crs manually to get rid of GDAL errors with init string format
+         sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf()
+   })
 
    ## Check mm polygons and bind in one object
 
-    message("Validating basemap geometry...")
+   message("Validating basemap geometry...")
    mm <- checkgeometry(mm, "POLYGON")
    mm <- do.call(rbind, mm)
 
@@ -303,7 +304,7 @@ get_final_map <- function(folder = NULL, filename = "final.RDS"){
    if (isFALSE(all(accessnat %in% names(mm)))){
       message("Warning: you will not be able to run the Access to Nature capacity model without the attribute(s) ",
               paste0(accessnat[!accessnat %in% names(mm)], collapse = " & ")
-              )
+      )
    }
 
    demandattr <- c("housePop", "health", "riskgroup")
@@ -333,7 +334,7 @@ get_final_map <- function(folder = NULL, filename = "final.RDS"){
       invisible({
          mm <<- mm
          studyArea <<- studyArea
-         projectLog <<- projectLog
+         #projectLog <<- projectLog
       })
    })
 
