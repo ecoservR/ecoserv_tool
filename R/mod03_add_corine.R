@@ -196,7 +196,7 @@ add_corine <- function(mm = parent.frame()$mm,
             ## Split into grid squares
 
             SAgrid <- suppressWarnings(sf::st_intersection(grid, sf::st_geometry(studyAreaBuffer)) %>%
-                                          sf::st_make) # clip grid to study area
+                                          sf::st_make_valid()) # clip grid to study area
             SAgrid$TILE_NAME <- droplevels(SAgrid$TILE_NAME)  # keep only relevant tiles
 
             corine_list <- vector(mode = "list", length = length(SAgrid))
