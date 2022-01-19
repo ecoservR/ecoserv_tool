@@ -166,6 +166,7 @@ capacity_pollination <- function(x = parent.frame()$mm,
    # list of habitats that support pollinators
    corehabs <- c("J21", "J22", "J23", "J12v", "Linear",
                  "H65", "H66", "H84", "H85",
+                 "H24", "H26", "H2u",
                  "GW", "GR", # green wall / green roof interventions
                  "Gardens / Parks / Brownfield",
                  "Garden",
