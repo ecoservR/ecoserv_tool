@@ -199,10 +199,10 @@ add_corine <- function(mm = parent.frame()$mm,
                                           sf::st_make_valid()) # clip grid to study area
             SAgrid$TILE_NAME <- droplevels(SAgrid$TILE_NAME)  # keep only relevant tiles
 
-            corine_list <- vector(mode = "list", length = length(SAgrid))
+            corine_list <- vector(mode = "list", length = nrow(SAgrid))
             ## somehow lapply breaks so using a loop instead to chop up corine into named tiles
 
-            for (i in 1:length(SAgrid)){
+            for (i in 1:nrow(SAgrid)){
                corine_list[[i]] <- raster::crop(corine, SAgrid[i,]) %>% raster::mask(SAgrid[i,])
             }
 
