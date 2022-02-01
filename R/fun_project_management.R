@@ -163,7 +163,7 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
       studyAreaBuffer <- readRDS(SA[[1]])
    } else {
       stop(paste0("No buffered study area found in ",
-      file.path(wd, projectLog$output_temp),
+      file.path(folder, projectLog$output_temp),
       " . Did you move or rename the file?"))
    }
 
