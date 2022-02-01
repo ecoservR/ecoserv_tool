@@ -79,11 +79,22 @@ add_DTM <- function(mm = parent.frame()$mm,
 
          gridSA$TILE_NAME <- droplevels(gridSA$TILE_NAME)  # drop squares that are not in the study area
 
+         gridSA <- gridSA[gridSA$TILE_NAME %in% names(mm),]  # make sure that tiles will be matched to existing mm tiles
+
          dtm_tiles <- vector("list", length = nrow(gridSA))  # create empty list that we will fill with tiles
          names(dtm_tiles) <- gridSA$TILE_NAME
 
          # Create the dtm tiles for each 10x10km square in study area, and save to temporary folder defined previously
          for (i in 1:length(dtm_tiles)){
+
+            suppressWarnings({  # make sure extents overlap before forcing a clip, otherwise errors
+               if (lengths(
+                  sf::st_intersects(gridSA[gridSA$TILE_NAME == names(dtm_tiles)[[i]], ],
+                                sf::st_set_crs(sf::st_as_sf(sf::st_as_sfc(sf::st_bbox(dtm[[1]]))), 27700)
+                  )) == 0) {next}
+
+            })
+
             ## wrapping in writeraster rather than using filename= in crop due to bug with dataType FLT4S
             dtm_tiles[[i]] <- raster::writeRaster(
                raster::crop(dtm[[1]], gridSA[gridSA$TILE_NAME == names(dtm_tiles)[[i]],]),
