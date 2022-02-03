@@ -71,6 +71,7 @@ add_hedgerows <- function(mm = parent.frame()$mm,
       ## Grid the polygonized hedgerows so we have named tiles that match mm
 
       SAgrid <- ecoservR::grid_study(studyAreaBuffer) # create grid
+      SAgrid <- SAgrid[names(SAgrid) %in% names(mm)]
       hedge <- lapply(SAgrid, function(x)  # tile hedges
          sf::st_intersection(hedge, sf::st_geometry(x)) %>%
             ecoservR::checkgeometry(.) %>%
@@ -166,6 +167,15 @@ add_hedgerows <- function(mm = parent.frame()$mm,
          tilename <- names(mm)[i]
 
          if (!tilename %in% names(hedge)){next}
+
+         # Make extra sure the geometry cols have the same name (caused problems before)
+
+         if (attr(hedge[[tilename]], "sf_column") != attr(mm[[tilename]], "sf_column")){
+
+            hedge[[tilename]] <- ecoservR::rename_geometry(hedge[[tilename]],
+                                                           attr(mm[[tilename]], "sf_column"))
+         }
+
 
          ## Add columns to hedges to correspond with mm attributes
 
