@@ -174,8 +174,7 @@ source <- source %>%
       stars::st_as_stars(patches),
       as_points = FALSE,
       merge = TRUE) %>%
-      dplyr::mutate(area_ha = as.numeric(sf::st_area(.))/10000) %>%
-      dplyr::select(-layer) # remove the attribute that stars adds
+      dplyr::mutate(area_ha = as.numeric(sf::st_area(.))/10000)
 
 
    # # Union to keep only large enough patches - BOTTLENECK: could this be done from raster instead?
