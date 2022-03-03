@@ -268,7 +268,7 @@ get_final_map <- function(folder = NULL, filename = "final.RDS", projectLog = pa
 
    ## Load the study area
 
-   studypath <- unnamme(projectLog$df[projectLog$df$dataset == "studyArea", ][["path"]])
+   studypath <- unname(projectLog$df[projectLog$df$dataset == "studyArea", ][["path"]])
 
    ### Import the study area outline (specifying OSGB as crs)
 
