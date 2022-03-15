@@ -46,27 +46,27 @@ classif_mastermap <- function(x, params){
       HabCode_B = dplyr::case_when(
 
          # active mines should be classified as such - we do it first so they don't get swept under the rug by another regular expression
-         grepl("Spoil Heap", Term) ~ "I22",  # should we classify if vegetated?
+         grepl("Spoil Heap", Term) & !grepl("Inactive", Term) ~ "I22",  # should we classify if vegetated?
          grepl("Mineral Workings", Term) & !grepl("Inactive", Term) ~ "I2u",
 
          # inactive mines get classified as the vegetation that colonised them
-         grepl("Mineral Workings", Term) &
+         (grepl("Mineral Workings", Term) | grepl("Spoil Heap", Term)) &
             grepl("Coniferous Trees", Term) &
             grepl("Nonconiferous Trees", Term) ~ "A13",
 
-         grepl("Mineral Workings", Term) &
+         (grepl("Mineral Workings", Term) | grepl("Spoil Heap", Term)) &
             grepl("Coniferous Trees", Term) ~ "A12",
 
-         grepl("Mineral Workings", Term) &
+         (grepl("Mineral Workings", Term) | grepl("Spoil Heap", Term)) &
             grepl("Nonconiferous Trees", Term) ~ "A11",
 
-         grepl("Mineral Workings", Term) &
+         (grepl("Mineral Workings", Term) | grepl("Spoil Heap", Term)) &
             grepl("Heath", Term) ~ "D/I1",
 
-         grepl("Mineral Workings", Term) &
+         (grepl("Mineral Workings", Term) | grepl("Spoil Heap", Term)) &
             grepl("Rough Grassland", Term) ~ "Bu1",
 
-         grepl("Mineral Workings", Term) &
+         (grepl("Mineral Workings", Term) | grepl("Spoil Heap", Term)) &
             grepl("Scrub", Term) ~ "A2",
 
 
