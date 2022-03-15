@@ -75,6 +75,8 @@ capacity_access_nature <- function(x = parent.frame()$mm,
       # NOT using rbindlist here because only keeps the extent of the first tile
    }
 
+   x$HabClass <- NULL
+   x$HabBroad <- NULL  # if the attributes are already present in basemap remove them, as they get joined with lookup
 
    ### Merge the lookup table -----
 
