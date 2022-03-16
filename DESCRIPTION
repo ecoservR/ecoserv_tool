@@ -46,3 +46,5 @@ Imports:
     methods,
     gtools
 RoxygenNote: 7.1.1
+Depends: 
+    R (>= 2.10)

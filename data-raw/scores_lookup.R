@@ -15,9 +15,20 @@
 
 ## Import spreadsheet
 
-hab_lookup <- read.csv("C://ecoservR_package_support/ecoserv_hab_lookup.csv", sep = ";")
+#hab_lookup <- read.csv("C://ecoservR_package_support/ecoserv_hab_lookup.csv", sep = ";")
 
-## Any tidying up? all done in the spreadsheet
+hab_lookup <- ecoservR::hab_lookup  # by default the table to fix should be in the package
+
+
+# History of changes ------------------------------------------------------
+# from March 2022 changing things from the package lookup table rather than from the excel sheet
+# will need a full review someday
+
+## 16 March 2022: fix cost for saltmarsh for mire network
+
+#hab_lookup[hab_lookup$HabBroad == "Saltmarsh",]$CostMire <- 1
+#hab_lookup[hab_lookup$HabBroad %in% c("Sand dune", "Intertidal"), ]$CostMire <- 10
+
 
 
 
