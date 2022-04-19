@@ -283,26 +283,34 @@ demand_air_purif <- function(x = parent.frame()$mm,
                                    r,
                                    field = NULL)   # manmade features get value of 1
 
-   ### Focal stats for proportion of surfaces (because they have value of 1,
+   ### Focal stats for proportion of surfaces
+
+   manmadescore <- focalScore(manmade, radius = local, type = "cover")
+
+
+   #### OLD FOCAL STATS
+   # because raster has values of 1,
    # sum will give the number of cells with manmade features in the radius,
    # and we divide by total ncell for proportion)
 
-   # Create weight matrices based on the search radius for focal stats
-   # (automatically considers the res of the raster to calculate distance)
+   # # Create weight matrices based on the search radius for focal stats
+   # # (automatically considers the res of the raster to calculate distance)
+   #
+   # window_local <- raster::focalWeight(r,
+   #                                     local,
+   #                                     "circle")   # search window
+   # window_local[window_local > 0] <- 1     # replacing weights by 1
+   #
+   # denominator <- raster::ncell(window_local[window_local>0])  # for custom mean function
+   #
+   # # We use the default focal stats (sum) function which is way faster than a custom function, THEN we divide the results by the denominator (number of cells in the window) to get the proportion
+   # manmade <- raster::focal(manmade, w = window_local, na.rm = TRUE, pad = TRUE)
+   # manmadescore <- manmade/denominator
 
-   window_local <- raster::focalWeight(r,
-                                       local,
-                                       "circle")   # search window
-   window_local[window_local > 0] <- 1     # replacing weights by 1
-
-   denominator <- raster::ncell(window_local[window_local>0])  # for custom mean function
-
-   # We use the default focal stats (sum) function which is way faster than a custom function, THEN we divide the results by the denominator (number of cells in the window) to get the proportion
-   manmade <- raster::focal(manmade, w = window_local, na.rm = TRUE, pad = TRUE)
-   manmadescore <- manmade/denominator
 
 
-   ## Mask to only keep what is close to roads
+
+   ## Mask to only keep what is close to roads: should be there but omitted as buggy?
 
   # manmadescore <- raster::mask(manmadescore, roadmask)
 
@@ -317,7 +325,7 @@ demand_air_purif <- function(x = parent.frame()$mm,
       message("Manmade surfaces indicator saved.")
    }
 
-   rm(manmade, denominator)
+   rm(manmade)
 
    } else {
 
@@ -347,23 +355,32 @@ demand_air_purif <- function(x = parent.frame()$mm,
 
    ## Create the population raster by summing individual house populations in each cell
 
-   popscore <- raster::rasterize(houses, r, field = "housePop", fun = "sum", na.rm = TRUE,
+   population <- raster::rasterize(houses, r, field = "housePop", fun = "sum", na.rm = TRUE,
                                  filename = file.path(scratch, "airpurif_pop_temp"), overwrite = TRUE)
 
 
-   # Create weight matrices based on the search radius for focal stats
-   # (automatically considers the res of the raster to calculate distance)
-   window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
-   window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
-
+   # Focal stats (sum)
 
    message("...calculating population in ", local, " m radius")
 
-   # Calculate the summarised local scores
-   popscore <- raster::focal(popscore, w = window_local, na.rm = TRUE, pad = TRUE)
+   popscore <- focalScore(population, radius = local, type = "sum")
 
 
-   ## Mask to only keep what is close to roads
+   #### OLD FOCAL STATS
+   # # Create weight matrices based on the search radius for focal stats
+   # # (automatically considers the res of the raster to calculate distance)
+   # window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
+   # window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
+   #
+   # message("...calculating population in ", local, " m radius")
+   #
+   # # Calculate the summarised local scores
+   # popscore <- raster::focal(population, w = window_local, na.rm = TRUE, pad = TRUE)
+
+
+
+
+   ### Mask to only keep what is close to roads
 
    #popscore <- raster::mask(popscore, roadmask)
 
@@ -390,19 +407,23 @@ demand_air_purif <- function(x = parent.frame()$mm,
    message("INDICATOR 4 of 4: health score")
 
    # Create the health raster from the houses data we subsetted in previous indicator
-   healthscore <- raster::rasterize(houses, r, field = "health", fun = mean, na.rm = TRUE,
+   healthmap <- raster::rasterize(houses, r, field = "health", fun = mean, na.rm = TRUE,
                                     filename = file.path(scratch, "airpurif_health_temp"),
                                     overwrite = TRUE)
 
    rm(houses)
 
-   # Calculate the summarised local scores
+   ## Focal statistics
+   healthscore <- focalScore(healthmap, radius = local, type = "mean")
 
-   healthscore <- raster::focal(healthscore, w = window_local,
-                                fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
-                                   # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
-                                },
-                                pad = TRUE) # pad edges with NAs so raster has full extent)
+   ### OLD FOCAL STATISTICS
+   # # Calculate the summarised local scores
+   #
+   # healthscore <- raster::focal(healthmap, w = window_local,
+   #                              fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
+   #                                 # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
+   #                              },
+   #                              pad = TRUE) # pad edges with NAs so raster has full extent)
 
 
    ## Mask to only keep what is close to roads
