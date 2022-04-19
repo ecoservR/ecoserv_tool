@@ -35,7 +35,7 @@ focalScore <- function(r, radius, type){
    fw[fw > 0] <- 1
 
    ## Mean or sum specified by fun = "type"
-   focal_r <- terra::focal(x = r_spat_rast, w = fw, fun = type, na.rm = TRUE, expand = TRUE)
+   focal_r <- terra::focal(x = r_spat_rast, w = fw, fun = type, na.rm = TRUE)
 
 
    } else if (type == "cover"){
@@ -43,7 +43,7 @@ focalScore <- function(r, radius, type){
    ### Proportions
    # To get a fraction cover in a given radius, values must all be 0 or 1 (presence and absence), and we must use the weighted focal window matrix (not set to 0s and 1s like above). Summing weights by our cover values of 0 or 1 gives the fraction cover
 
-      focal_r <- terra::focal(x = r_spat_rast, w = fw, fun = "sum", na.rm=TRUE, expand = TRUE)
+      focal_r <- terra::focal(x = r_spat_rast, w = fw, fun = "sum", na.rm=TRUE)
 
    }
 
