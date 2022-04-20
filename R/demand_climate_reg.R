@@ -317,7 +317,7 @@ demand_climate_reg <- function(x = parent.frame()$mm,
       if (indicators){
          raster::writeRaster(manmadescore,
                              filename = file.path(indicator_path,
-                                                  paste(runtitle, "clim_reg_manmade_indic.tif", sep="_")),
+                                                  paste(projectLog$title, runtitle, "clim_reg_manmade_indic.tif", sep="_")),
                              overwrite = TRUE)
 
          message("Manmade surfaces indicator saved.")
