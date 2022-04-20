@@ -323,7 +323,7 @@ demand_climate_reg <- function(x = parent.frame()$mm,
          message("Manmade surfaces indicator saved.")
       }
 
-      rm(manmade, denominator)
+      rm(manmade)
 
 
    } else {
