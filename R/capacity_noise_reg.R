@@ -90,25 +90,32 @@ capacity_noise_reg <- function(x = parent.frame()$mm,
 
    ### Focal statistics ----
 
+   message("Calculating noise regulation score at short range")
+   noise_short <- focalScore(noise_r, radius = short, type = "sum")
+
+   message("Calculating noise regulation score at local scale")
+   noise_long <- focalScore(noise_r, radius = local, type = "sum")
+
+   ### OLD FOCAL STATS
    # Create weight matrices based on the search radius for focal stats
    # (automatically considers the res of the raster to calculate distance)
 
-   w_short <- raster::focalWeight(r, short, "circle")   # search window for the short dist
-   w_short[w_short > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
-   w_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
-   w_local[w_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
-
-   # Raster of score sums in the short search window
-   message("Calculating noise regulation score at short range")
-   noise_short <- raster::focal(noise_r, w = w_short, na.rm = TRUE, pad = TRUE, padValue = NA,
-                        filename = file.path(scratch, "noisereg_short"),
-                        overwrite = TRUE)
-
-   # Raster of score sums in the big search window
-   message("Calculating noise regulation score at local scale")
-   noise_long <- raster::focal(noise_r, w = w_local, na.rm = TRUE, pad = TRUE, padValue = NA,
-                       filename = file.path(scratch, "noisereg_long"),
-                       overwrite = TRUE)
+   # w_short <- raster::focalWeight(r, short, "circle")   # search window for the short dist
+   # w_short[w_short > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
+   # w_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
+   # w_local[w_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
+   #
+   # # Raster of score sums in the short search window
+   # message("Calculating noise regulation score at short range")
+   # noise_short <- raster::focal(noise_r, w = w_short, na.rm = TRUE, pad = TRUE, padValue = NA,
+   #                      filename = file.path(scratch, "noisereg_short"),
+   #                      overwrite = TRUE)
+   #
+   # # Raster of score sums in the big search window
+   # message("Calculating noise regulation score at local scale")
+   # noise_long <- raster::focal(noise_r, w = w_local, na.rm = TRUE, pad = TRUE, padValue = NA,
+   #                     filename = file.path(scratch, "noisereg_long"),
+   #                     overwrite = TRUE)
 
    rm(noise_r)  # remove old raster to clear up some memory
 

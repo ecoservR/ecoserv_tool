@@ -7,13 +7,10 @@
 
 # NOTES
 
-# This is the version to be used, updated by Karl according to Jim's suggestions. Future improvements (to do):
-# use noise map to automatically determine max distance for the different noise sources (create dataset and store in builtin folder)
-
-# 2021 update: roads, airports and motorways are now built into the package
-
 # This script uses the classified Base Map to produce a raster of the demand for noise regulation within a study area.
 # See Ecoserv technical report for descriptions, assumptions and caveats.
+
+# 2021 update: roads, airports and motorways are now built into the package
 
 # https://www.nature.scot/snh-research-report-954-ecoserv-gis-v33-toolkit-mapping-ecosystem-services-gb-scale
 
@@ -311,16 +308,22 @@ demand_noise_reg <- function(x = parent.frame()$mm,
                                     filename = file.path(scratch, "airpurif_pop_temp"), overwrite = TRUE)
 
 
-      # Create weight matrices based on the search radius for focal stats
-      # (automatically considers the res of the raster to calculate distance)
-      window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
-      window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
-
-
       message("...calculating population in ", local, " m radius")
 
       # Calculate the summarised local scores
-      popscore <- raster::focal(popscore, w = window_local, na.rm = TRUE, pad = TRUE)
+      popscore <- focalScore(popscore, radius = local, type = "sum")
+
+      # ## OLD FOCAL STATS
+      # # Create weight matrices based on the search radius for focal stats
+      # # (automatically considers the res of the raster to calculate distance)
+      # window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
+      # window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
+      #
+      #
+      # message("...calculating population in ", local, " m radius")
+      #
+      # # Calculate the summarised local scores
+      # popscore <- raster::focal(popscore, w = window_local, na.rm = TRUE, pad = TRUE)
 
 
 
@@ -354,13 +357,18 @@ demand_noise_reg <- function(x = parent.frame()$mm,
 
       rm(houses)
 
+
       # Calculate the summarised local scores
 
-      healthscore <- raster::focal(healthscore, w = window_local,
-                                   fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
-                                      # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
-                                   },
-                                   pad = TRUE) # pad edges with NAs so raster has full extent)
+      healthscore <- focalScore(healthscore, radius = local, type = "mean")
+
+
+      ### OLD FOCAL STATS
+      # healthscore <- raster::focal(healthscore, w = window_local,
+      #                              fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
+      #                                 # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
+      #                              },
+      #                              pad = TRUE) # pad edges with NAs so raster has full extent)
 
 
 

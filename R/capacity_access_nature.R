@@ -271,21 +271,26 @@ capacity_access_nature <- function(x = parent.frame()$mm,
 
    ### Focal statistics ----
 
+   message("Calculating scores")
+
+   score_all_r <- focalScore(score_all_r, radius = local, type = "sum")
+   score_access_r <- focalScore(score_access_r, radius = local, type = "sum")
+
+   ### OLD FOCAL STATS
    # Create weight matrices based on the search radius for focal stats
    # (automatically considers the res of the raster to calculate distance)
 
-   w_short <- raster::focalWeight(r, local, "circle")   # search window for the short dist, gives weighted indices that allow to calculate a mean
-   w_short[w_short > 0] <- 1               # replacing weights by 1 (we want full sum)
-
-   message("Calculating scores")
-   # Raster of scores, averaged at local scale
-   score_all_r <- raster::focal(score_all_r, w = w_short, na.rm = TRUE,
-                        filename = file.path(scratch, "accessnature_allscore"),
-                        overwrite = TRUE)  # the full nature raster
-
-   score_access_r <- raster::focal(score_access_r, w = w_short, na.rm = TRUE,
-                           filename = file.path(scratch, "accessnature_accessscore"),
-                           overwrite = TRUE)  # the accessible nature raster
+   # w_short <- raster::focalWeight(r, local, "circle")   # search window for the short dist, gives weighted indices that allow to calculate a mean
+   # w_short[w_short > 0] <- 1               # replacing weights by 1 (we want full sum)
+   #
+   # # Raster of scores, averaged at local scale
+   # score_all_r <- raster::focal(score_all_r, w = w_short, na.rm = TRUE,
+   #                      filename = file.path(scratch, "accessnature_allscore"),
+   #                      overwrite = TRUE)  # the full nature raster
+   #
+   # score_access_r <- raster::focal(score_access_r, w = w_short, na.rm = TRUE,
+   #                         filename = file.path(scratch, "accessnature_accessscore"),
+   #                         overwrite = TRUE)  # the accessible nature raster
 
 
 

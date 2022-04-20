@@ -183,34 +183,44 @@ demand_climate_reg <- function(x = parent.frame()$mm,
                                      filename = file.path(scratch, "climreg_risk_temp"), overwrite = TRUE)
 
 
-      # Create weight matrices based on the search radius for focal stats
-      # (automatically considers the res of the raster to calculate distance)
-      window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
-      window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
-
-
+      ## FOCAL STATS
       message("calculating population in ", local, " m radius")
 
-      # Calculate the summarised local scores
-      popscore <- raster::focal(popscore,
-                                w = window_local,
-                                na.rm = TRUE, pad = TRUE)
+      popscore <- focalScore(popscore, radius = local, type = "sum")
+
+      ### OLD FOCAL STATS
+      # Create weight matrices based on the search radius for focal stats
+      # (automatically considers the res of the raster to calculate distance)
+      # window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
+      # window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
+      #
+      #
+      # message("calculating population in ", local, " m radius")
+      #
+      # # Calculate the summarised local scores
+      # popscore <- raster::focal(popscore,
+      #                           w = window_local,
+      #                           na.rm = TRUE, pad = TRUE)
 
 
       # Reclassify to keep only pop densities above a defined threshold
       popscore <- raster::reclassify(popscore,
-                                     cbind(0, pop_density, NA),  # remove anything below pop of 50
+                                     cbind(0, pop_density, NA),  # remove anything below pop threshold
                                      include.lowest = TRUE)
 
 
       ## Calculate mean riskgroup in local area
       message("calculating health risk in ", local, " m radius")
-      riskscore <- raster::focal(riskscore,
-                                 w = window_local,
-                                 fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
-                                    # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
-                                 })
-      # custom function defined, as default mean method of focal is flawed with circular window
+
+      riskscore <- focalScore(riskscore, radius = local, type = "mean")
+
+      ### OLD FOCAL STATS
+      # riskscore <- raster::focal(riskscore,
+      #                            w = window_local,
+      #                            fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
+      #                               # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
+      #                            })
+      # # custom function defined, as default mean method of focal is flawed with circular window
 
 
       ### Multiply them and mask by builtup area
@@ -223,6 +233,7 @@ demand_climate_reg <- function(x = parent.frame()$mm,
 
       # ## The score is then masked to show only those areas within 250m of land or houses.
       # ## Mask everything that is further than 250m from land or houses (basically water....)
+      # ## currently not applied as too difficult / inefficient
       #
       # housemask <- sf::st_buffer(houses, 250) %>%
       #   checkgeometry() %>%  # must be valid singlepart polygons to rasterize properly
@@ -279,23 +290,28 @@ demand_climate_reg <- function(x = parent.frame()$mm,
                                       r,
                                       field = NULL)   # manmade features get value of 1
 
+
+      ### Focal stats on proportion of manmade surfaces
+      manmadescore <- focalScore(manmade, radius = local, type = "cover")
+
+      #### OLD FOCAL STATS
       ### Focal stats for proportion of surfaces (because they have value of 1,
       # sum will give the number of cells with manmade features in the radius,
       # and we divide by total ncell for proportion)
 
-      # Create weight matrices based on the search radius for focal stats
-      # (automatically considers the res of the raster to calculate distance)
-
-      window_local <- raster::focalWeight(r,
-                                          local,
-                                          "circle")   # search window
-      window_local[window_local > 0] <- 1     # replacing weights by 1
-
-      denominator <- raster::ncell(window_local[window_local>0])  # for custom mean function
-
-      # We use the default focal stats (sum) function which is way faster than a custom function, THEN we divide the results by the denominator (number of cells in the window) to get the proportion
-      manmade <- raster::focal(manmade, w = window_local, na.rm = TRUE, pad = TRUE)
-      manmadescore <- manmade/denominator
+      # # Create weight matrices based on the search radius for focal stats
+      # # (automatically considers the res of the raster to calculate distance)
+      #
+      # window_local <- raster::focalWeight(r,
+      #                                     local,
+      #                                     "circle")   # search window
+      # window_local[window_local > 0] <- 1     # replacing weights by 1
+      #
+      # denominator <- raster::ncell(window_local[window_local>0])  # for custom mean function
+      #
+      # # We use the default focal stats (sum) function which is way faster than a custom function, THEN we divide the results by the denominator (number of cells in the window) to get the proportion
+      # manmade <- raster::focal(manmade, w = window_local, na.rm = TRUE, pad = TRUE)
+      # manmadescore <- manmade/denominator
 
       # Save output: this output has values 0-1
       if (indicators){

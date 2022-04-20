@@ -109,30 +109,38 @@ capacity_air_purif <- function(x = parent.frame()$mm,
    # We don't need x anymore, except for buffering to create mask around the capacity areas
    x <- x %>% sf::st_buffer(buffer) %>% checkgeometry(., "POLYGON")
 
-   airmask <- fasterize::fasterize(x,r, field = NULL, background = NA)
+   airmask <- fasterize::fasterize(x, r, field = NULL, background = NA)
 
 
 
    ### Focal statistics ----
+
    message("Calculating scores at short range.")
+   air_short <- focalScore(air_r, radius = short, type = "sum")
+
+   message("Calculating scores at local scale.")
+   air_long <- focalScore(air_r, radius = local, type = "sum")
+
+
+   ### OLD FOCAL STATS
    # Create weight matrices based on the search radius for focal stats
    # (automatically considers the res of the raster to calculate distance)
 
-   w_short <- raster::focalWeight(r, short, "circle")   # search window for the short dist
-   w_short[w_short > 0] <- 1               # replacing weights by 1 (we want full sum)
-   w_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
-   w_local[w_local > 0] <- 1               # replacing weights by 1 (we want full sum)
-
-   # Raster of score sums in the short search window
-   air_short <- raster::focal(air_r, w = w_short, na.rm = TRUE,
-                              filename = file.path(scratch, "airpur_short"),
-                              overwrite = TRUE)
-
-   message("Calculating scores at local scale.")
-   # Raster of score sums in the big search window
-   air_long <- raster::focal(air_r, w = w_local, na.rm = TRUE,
-                              filename = file.path(scratch, "airpur_long"),
-                              overwrite = TRUE)
+   # w_short <- raster::focalWeight(r, short, "circle")   # search window for the short dist
+   # w_short[w_short > 0] <- 1               # replacing weights by 1 (we want full sum)
+   # w_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
+   # w_local[w_local > 0] <- 1               # replacing weights by 1 (we want full sum)
+   #
+   # # Raster of score sums in the short search window
+   # air_short <- raster::focal(air_r, w = w_short, na.rm = TRUE,
+   #                            filename = file.path(scratch, "airpur_short"),
+   #                            overwrite = TRUE)
+   #
+   #
+   # # Raster of score sums in the big search window
+   # air_long <- raster::focal(air_r, w = w_local, na.rm = TRUE,
+   #                            filename = file.path(scratch, "airpur_long"),
+   #                            overwrite = TRUE)
 
 
    ### Calculate score -----
@@ -151,7 +159,7 @@ capacity_air_purif <- function(x = parent.frame()$mm,
    ### Create functional threshold mask ----
    message("Applying functional threshold.")
 
-   # The function and notes on how it works can be found in the 00_new_functions script
+   # The function and notes on how it works can be found in the fun_spatial script
 
    # This function will create a mask raster based on patch statistics, removing all patches smaller than the threshold. The porportion allows for a small number of pixels in the neighbourhood to have a low score as it is hardly ever uniformly 0.
 

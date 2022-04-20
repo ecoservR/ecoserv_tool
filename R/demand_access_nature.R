@@ -258,20 +258,28 @@ demand_access_nature <- function(x = parent.frame()$mm,
                                     filename = file.path(scratch, "access_nature_pop_temp"), overwrite = TRUE)
 
 
-      # Create weight matrices based on the search radius for focal stats
-      # (automatically considers the res of the raster to calculate distance)
-      window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
-      window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
-
 
       message("...calculating population in ", local, " m radius")
 
       # Calculate the summarised local scores
-      popscore <- raster::focal(popscore, w = window_local, na.rm = TRUE, pad = TRUE)
+      popscore <- focalScore(popscore, radius = local, type = "sum")
+
+
+      ### OLD FOCAL STATS
+      # Create weight matrices based on the search radius for focal stats
+      # (automatically considers the res of the raster to calculate distance)
+      # window_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
+      # window_local[window_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
+      #
+      #
+      # message("...calculating population in ", local, " m radius")
+      #
+      # # Calculate the summarised local scores
+      # popscore <- raster::focal(popscore, w = window_local, na.rm = TRUE, pad = TRUE)
+
 
 
       ## Mask to only keep what is close to roads
-
       #popscore <- raster::mask(popscore, roadmask)
 
       # Save raw indicator if need be
@@ -304,12 +312,15 @@ demand_access_nature <- function(x = parent.frame()$mm,
       rm(houses)
 
       # Calculate the summarised local scores
+      healthscore <- focalScore(healthscore, radius = local, type = "mean")
 
-      healthscore <- raster::focal(healthscore, w = window_local,
-                                   fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
-                                      # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
-                                   },
-                                   pad = TRUE) # pad edges with NAs so raster has full extent)
+
+      ## OLD FOCAL STATS
+      # healthscore <- raster::focal(healthscore, w = window_local,
+      #                              fun = function(x){mean(x[window_local != 0], na.rm=TRUE)
+      #                                 # we select only the values in the circular window (discarding values where window is 0), and perform a mean calculation on this subset rather than the full rectangular extent of the matrix. This ensure the correct denominator while discarding NAs.
+      #                              },
+      #                              pad = TRUE) # pad edges with NAs so raster has full extent)
 
 
       ## Mask to only keep what is close to roads

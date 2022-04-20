@@ -96,17 +96,21 @@ capacity_climate_reg <- function(x = parent.frame()$mm,
 
    ### Focal statistics ----
 
+   clim_score <- focalScore(green_r, radius = local, type = "sum")
+
+
+   ### OLD FOCAL STATS
    # Create weight matrices based on the search radius for focal stats
    # (automatically considers the res of the raster to calculate distance)
-   w_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
-   w_local[w_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
-
-   message("Calculating scores at local scale")
-   # Raster of number of tree cells in the big search window
-   clim_score <- raster::focal(green_r, w = w_local, na.rm = TRUE, pad = TRUE, padValue = NA,
-                       filename = file.path(scratch, "climreg_score"),
-                       overwrite = TRUE
-   )
+   # w_local <- raster::focalWeight(r, local, "circle")   # search window for the longer dist
+   # w_local[w_local > 0] <- 1               # replacing weights by 1 (we want full sum, not mean)
+   #
+   # message("Calculating scores at local scale")
+   # # Raster of number of tree cells in the big search window
+   # clim_score <- raster::focal(green_r, w = w_local, na.rm = TRUE, pad = TRUE, padValue = NA,
+   #                     filename = file.path(scratch, "climreg_score"),
+   #                     overwrite = TRUE
+   # )
 
    rm(green_r) # free up memory
 
