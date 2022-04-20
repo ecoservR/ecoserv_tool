@@ -160,7 +160,7 @@ demand_access_nature <- function(x = parent.frame()$mm,
       gi_poly <- sf::st_as_sf(
          stars::st_as_stars(gi_r),
          merge = TRUE) %>%
-         mutate(area_ha = as.numeric(sf::st_area(.))/10000)  # calculate area for filtering
+         dplyr::mutate(area_ha = as.numeric(sf::st_area(.))/10000)  # calculate area for filtering
 
       ## extract the GI meeting size requirements
       gi2ha <- gi_poly %>% dplyr::filter(area_ha >= 2)   # woods greater than 2ha
@@ -369,7 +369,7 @@ demand_access_nature <- function(x = parent.frame()$mm,
    # we work out what the score is for a focal sum if the average pop per hectare is what is specified in the function
    # people per hectare times the area in hectares of the focal circle
 
-   popvalue_thres <- pop_threshold * length(window_local[window_local > 0])*res^2 / 10000
+   popvalue_thres <- pop_threshold * length(fw[fw > 0])*res^2 / 10000
 
    ## Mask the raster
 
