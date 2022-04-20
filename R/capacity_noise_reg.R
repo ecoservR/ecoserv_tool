@@ -125,7 +125,7 @@ capacity_noise_reg <- function(x = parent.frame()$mm,
       filename = file.path(scratch, "noisereg_score"),
       overwrite = TRUE)
 
-   rm(noise_short, noise_long, w_short, w_local) # remove old objects
+   rm(noise_short, noise_long) # remove old objects
 
 
    ### Apply functional threshold -----
