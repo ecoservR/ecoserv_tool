@@ -369,7 +369,7 @@ capacity_access_nature <- function(x = parent.frame()$mm,
    # Delete all the stuff we don't need anymore
 
    on.exit({
-      rm(r, final_access, final_access_scaled, final_all, final_all_scaled, w_short, maxvalall, maxvalacc)
+      rm(r, final_access, final_access_scaled, final_all, final_all_scaled, maxvalall, maxvalacc)
       cleanUp(scratch)
       message("Access to nature capacity model finished. Process took ", round(difftime(timeB, timeA, units = "mins"), digits = 1), " minutes. Please check output folder for your maps.")
    })
