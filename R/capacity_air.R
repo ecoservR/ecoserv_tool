@@ -209,7 +209,7 @@ capacity_air_purif <- function(x = parent.frame()$mm,
    # Delete all the stuff we don't need anymore
 
    on.exit({
-      rm(r, final, final_scaled, w_local, w_short, maxval)
+      rm(r, final, final_scaled, maxval)
       cleanUp(scratch)
       message("Air purification capacity model finished. Process took ", round(difftime(timeB, timeA, units = "mins"), digits = 1), " minutes. Please check output folder for your maps.")
    })
