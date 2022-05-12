@@ -20,7 +20,7 @@ checkNames <- function(folder, layer = NULL, user_names, name = NULL){
 
    # Using st_read with a query of 0 rows only returns the headers and metadata.
 
-   type <- guessFiletype(folder)  # identify file extension
+   type <- suppressMessages({guessFiletype(folder)})  # identify file extension
 
    if (is.null(layer)){
       layer <- sf::st_layers(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]])[[1]] # if layer not specified, probably just one and we check the first
@@ -28,15 +28,20 @@ checkNames <- function(folder, layer = NULL, user_names, name = NULL){
 
    # if layer is not NULL we have a regex to use to get the layer name
    layers <- sf::st_layers(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]])[[1]] ## all layer names of 1st file
-   layer <- layers[grepl(layer, layers)]  # get just the name that matches
+   layer <- layers[grepl(layer, layers, ignore.case = TRUE)]  # get just the name that matches
 
    # import 0 rows from the data but returns headers
    actualnames <- sf::st_read(list.files(folder, pattern = type, full.names = TRUE, recursive = TRUE)[[1]],
-                          layer = layer,
+                          #layer = layer,
                           query = paste("select * from \"", layer, "\" limit 0", sep=""),
                           quiet = TRUE)
 
-   if (any(!user_names %in% names(actualnames))){
+   actualnames <- names(actualnames) # extract attributes
+
+   matchingnames <- base::sapply(unname(user_names), function(x) any(grepl(x, actualnames, ignore.case = TRUE)))
+
+   if (!all(matchingnames)){
+      #if (any(!user_names %in% names(actualnames)))
 
       stop("Layer ", name, " does not contain specified attribute(s): ",
            paste(user_names[!user_names %in% names(actualnames)], collapse = " "))
