@@ -2,17 +2,12 @@
 ### Wizard app to select data sources                    ###
 ### Saves a project log to the project folder            ###
 ### Sandra Angers-Blondin                                ###
-### November 2020                                        ###
+### November 2020, updates Apr 2022                      ###
 ############################################################
 
-## To do:
-
-## - create a selection menu for layers (like attributes) rather than having to type
-## - delete stuff tagged DELETE
-
-
-require(magrittr)
-require(shiny)
+library(dplyr)
+library(shiny)
+library(sf)
 
 ## No need to source the functions if they are placed within a "R" folder in app directory
 #source("funmod.R") # source functions and modules
@@ -30,7 +25,6 @@ user_proj <- projwd   # set when the app is launched via the launchWizard functi
 ui <- fluidPage(
 
    shinyjs::useShinyjs(),
-   shinyalert::useShinyalert(),
 
    tags$head(
       shiny::includeCSS(file.path('www', 'theme.css'))
@@ -46,9 +40,9 @@ ui <- fluidPage(
        shiny::titlePanel("Select your project folder"),
        p("This is the folder where project parameters and model outputs should be stored. It should be automatically populated if you are working within an R project as recommended."),
        shiny::fluidRow(
-       definePathsUI(id = "buttonproject",
-                     buttonLabel = "Project folder",
-                     winTitle = "Please select your project folder"),
+          definePathsUI(id = "buttonproject",
+                        buttonLabel = "Project folder",
+                        winTitle = "Please select your project folder"),
        )
    ),
 
@@ -203,15 +197,11 @@ server <- function(input, output, session) {
    # Before a value is selected, value is NA
 
    paths <- reactiveValues(
-      #mm = reactive("C:/BasemappeR/data/mastermap"), # for testing
       mm = callModule(definePaths, "button1", defaultpath = user_proj),
       studyArea = callModule(definePaths, "button2", defaultpath = user_proj),
-      #green = reactive("C:/Basemapper/data/greenspace"), # for testing
       green = callModule(definePaths, "button3", defaultpath = user_proj),
       opgreen = callModule(definePaths, "button4", defaultpath = user_proj),
-      #opgreen = reactive("C:/BasemappeR/data/opengreenspace"), # for testing
       corine = callModule(definePaths, "button5", defaultpath = user_proj),
-      #corine = reactive("C:/BasemappeR/data/corine"), # for testing
       nfi = callModule(definePaths, "button6", defaultpath = user_proj),
       phi = callModule(definePaths, "button7", defaultpath = user_proj),
       crome = callModule(definePaths, "button8", defaultpath = user_proj),
@@ -220,6 +210,20 @@ server <- function(input, output, session) {
       proj = callModule(definePaths, "buttonproject", defaultpath = user_proj, set = TRUE)
    )
 
+   # # For testing and development
+   # paths <- reactiveValues(
+   #   mm = reactive(file.path(projwd, "mastermap")),
+   #   studyArea = reactive(file.path(projwd,"studyarea")),
+   #   green = reactive(file.path(projwd,"greenspace")),
+   #   opgreen = reactive(file.path(projwd,"opengreenspace")),
+   #   corine = reactive(file.path(projwd,"corine")),
+   #   nfi = reactive(file.path(projwd,"nfi")),
+   #   phi = reactive(file.path(projwd,"phi")),
+   #   crome = reactive(file.path(projwd,"crome")),
+   #   dtm = reactive(file.path(projwd,"dtm")),
+   #   hedge = reactive(NA),
+   #   proj = callModule(definePaths, "buttonproject", defaultpath = user_proj, set = TRUE)
+   # )
 
 
    ### Data checking ------
@@ -280,16 +284,8 @@ server <- function(input, output, session) {
          type = try(guessFiletypeV(path)),  # automatically detect extension
 
          # when specified, layer name must contain this string
-         layer = c("TopographicArea",
-                   NA_character_,
-                   NA_character_,
-                   "GreenspaceSite",
-                   NA_character_,
-                   NA_character_,
-                   NA_character_,
-                   NA_character_,
-                   NA_character_,
-                   NA_character_),
+         layer = NA_character_,
+
 
          cols = c(
             mm = list(c("TOID" = "TOID", # mmcols
@@ -302,7 +298,7 @@ server <- function(input, output, session) {
             SA = list(c(NA_character_)), # studyarea
 
             green = list(c("TOID" = "toid",
-                           "priFunc" = "priFunc")),  # green cols
+                           "priFunc" = "primaryFunction")),  # green cols
 
             opgreen = list(c("id" = "id", # opgreen cols
                              "op_function" = "function.")),
@@ -364,104 +360,67 @@ server <- function(input, output, session) {
 
 
    ### Layer name check -----
+   ## This new layer check is less thorough but less annoying. It only makes sure that there is at least one polygon layer in the specified folder and records the name.
+   ## If there are many names, they get strung together with | as separator to allow regex to work in the checkAttrNames function
 
-   ## Create list of layers for mm and opengreenspace
+   # For mastermap
 
-   layers <- reactive({
+   observe({
+      req(isTRUE(validtype()))
 
-      req(isTRUE(validtype()))  # only compute once data inputs successfully checked
+      mmlayers <-check_layers(rv$df[rv$df$dataset == "mm", ][["path"]])
 
-      # List all the (spatial) files in the mm folder
-      mmfiles <- list.files(rv$df[rv$df$dataset == "mm", ][["path"]],
-                            pattern = paste0(guessFiletypeShiny(rv$df[rv$df$dataset == "mm", ][["path"]]),"$"),
-                            recursive=TRUE, full.names = TRUE)
+      if (length(mmlayers) < 1){
 
-      # if hundreds of tiles we don't want to loop through all of them to check layer name; check a section instead
+         shinyalert::shinyalert(title = "Geometry error",
+                                text = "Could not find a polygon layer for MasterMap Topography. Please check your data inputs and run the wizard again.",
+                                type = "error")
 
-      if (length(mmfiles) > 20){ mmfiles <- mmfiles[1:20]}
+      }
 
-      # list all layer names in mm folder
-      mm <- lapply(mmfiles,
-                   function(x) sf::st_layers(x)[[1]])
 
-      # list all layer names in opgr folder
-      opgr <- lapply(list.files(rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["path"]],
-                                pattern = paste0(guessFiletypeShiny(rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["path"]]),"$"),
-                                recursive=TRUE,full.names = TRUE),
-                     function(x) sf::st_layers(x)[[1]])
-
-      layerlist <- list(mm, opgr)
-      names(layerlist) <- c("mm", "OS_OpenGreenspace") # naming so can be used in subsetting
-
-      return(layerlist)
+      rv$df[rv$df$dataset == "mm", ][["layer"]] <- paste0(mmlayers, collapse = "|")
 
    })
 
-   ## Compare the list of layer names to the search string
+   ## For Open greenspace
+
+   observe({
+      req(isTRUE(validtype()))
+
+      opgrlayers <- check_layers(rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["path"]])
+
+
+      if (length(opgrlayers) < 1){
+
+         shinyalert::shinyalert(title = "Geometry error",
+                                text = "Could not find a polygon layer for OS Open Greenspace. Please check your data inputs and run the wizard again.",
+                                type = "error")
+
+      }
+
+      rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["layer"]] <- paste0(opgrlayers, collapse = "|")
+
+
+   })
+
+
+
+   ## Check if we have polygon data among the files
 
    validlayers <- reactive({
 
-      test <- mapply(function(x, n)
-         any(grepl(rv$df[rv$df$dataset == n, "layer"], x)),
-         x = layers(),
-         n = names(layers())
-      )
+      # test <- mapply(function(x, n)
+      #    any(grepl(rv$df[rv$df$dataset == n, "layer"], x, ignore.case = TRUE)),
+      #    x = layers(),
+      #    n = names(layers())
+      # )
 
-      return(test) # return the result of the logical test
+      test <- !is.na(rv$df[rv$df$dataset == "mm", ][["layer"]]) & !is.na( rv$df[rv$df$dataset == "OS_OpenGreenspace", ][["layer"]])
+
+      return(unlist(test)) # return the result of the logical test
    })
 
-   ## Ask user for input if invalid layers
-
-   # create empty reactive value to store input
-   newlayers <- reactiveValues(mm = NULL,
-                               opgr = NULL)
-
-   # if mm invalid, trigger pop up and save input
-   observe({
-      if (!validlayers()[[1]]) {
-         newlayers$mm <- callModule(modalModule, "modal_mm",
-                                    layername = "the layer for OS MasterMap",
-                                    holder = "e.g. TopographicArea",
-                                    searchlist = layers()$mm)
-      }
-   })
-
-   # if there is an input, update working df - WORKS!!
-   observe({
-      req(newlayers$mm, newlayers$mm())
-
-      rv$df[rv$df$dataset == "mm", "layer"] <- newlayers$mm()
-   })
-
-
-   # once mm verified AND if greenspace invalid, fix it too
-   observe({
-
-      if (validlayers()[[1]] && !validlayers()[[2]]) {
-
-         newlayers$opgr <- callModule(modalModule, "modal_opgr",
-                                      layername = "the layer for OS Open Greenspace",
-                                      holder = "e.g. GreenspaceSite",
-                                      searchlist = layers()$OS_OpenGreenspace)
-      }
-   })
-
-   # if there is an input, update working df - WORKS!!
-   observe({
-      req(newlayers$opgr, newlayers$opgr()) # object exists AND its value is non null
-
-      rv$df[rv$df$dataset == "OS_OpenGreenspace", "layer"] <- newlayers$opgr()
-   })
-
-
-
-
-   # ## testing that logic is sound - yes
-   # observe({
-   #    if (all(validlayers())){
-   #       print("yay")} else {print("booh")}  # works when supposed to
-   #
-   # })
 
 
    ### Attribute name check -----
@@ -472,15 +431,15 @@ server <- function(input, output, session) {
    # fetched from the data into a reactive list (that is NOT part of the rv$df, otherwise would cause re-evaluation of all the checks)
 
    observe({
-      req(isTRUE(validtype()) && all(validlayers())) #{
+      req(isTRUE(validtype()) && all(validlayers()))
 
-         # only evaluate when other checks have passed and the df is created
+      # only evaluate when other checks have passed and the df is created
 
-         #message("Data inputs and layers are valid, checking attributes")
+      #message("Data inputs and layers are valid, checking attributes")
 
-         for (i in 1:nrow(rv$df)){
+      for (i in 1:nrow(rv$df)){
 
-            isolate({
+         isolate({
             # for each data input that has been specified (avoid empty paths and raster files which don't have attributes)
             if (!is.na(rv$df[i, ][["path"]]) && !is.null(rv$df[i, ][["path"]]) &&
                 !rv$df[i, ][["type"]] %in% c("asc", "tif")){
@@ -499,15 +458,12 @@ server <- function(input, output, session) {
 
             }
 
-            }) # end of isolate
+         }) # end of isolate
 
-            #print(paste("check ",rv$df[i, ][["prettynames"]]))
-         }
+      }
 
-
-
-      #} # end of if
    })
+
 
    ## Compare the actual names to the expected names, and bring a pop-up if clarification is required
 
@@ -527,18 +483,29 @@ server <- function(input, output, session) {
             faultylist[[i]] <- c(as.integer(0))[-1]  # create an empty integer
 
          } else { # for all other datasets we need to know which attributes are not named properly
-            faultylist[[i]] <- which(!rv$df[i, ][["cols"]][[1]] %in% rv$realnames[[i]])
+            ## we allow difference in case
+
+            #faultylist[[i]] <- which(!rv$df[i, ][["cols"]][[1]] %in% rv$realnames[[i]])
+
+            faultylist[[i]] <- which(!unlist(grepl(
+               paste0(rv$realnames[[i]], collapse = "|"),
+               rv$df[i, ][["cols"]][[1]],
+               ignore.case = TRUE)))
+
          }
       } # end of loop
 
       return(faultylist)
    })
 
+   observe({
+      req(isTRUE(validtype()) && all(validlayers()), rv$realnames, faulty())
+
+   })
+
    newattr <- reactiveValues(name = NULL)  # empty reactive to store attribute input
 
    ## Reactively check whether there are any problems with names
-   ## TO DO: Eventually we could pass rv$realnames as choices to a selectinput instead,
-   # would require a new modal module to be created
 
    observe({
 
@@ -557,7 +524,6 @@ server <- function(input, output, session) {
                                     attrname = names(rv$df[rv$df$dataset == ds, ][["cols"]][[1]])[index[1]],
                                     searchlist = rv$realnames[which(rv$df$dataset == ds)])
 
-         print(rv$realnames[which(rv$df$dataset == ds)])
 
          newattr$ds <- ds
          newattr$index <- index[1]
@@ -584,7 +550,7 @@ server <- function(input, output, session) {
 
    output$df <- renderTable({
       req(input$checkdata)
-      dplyr::filter(rv$df[,c(1:5)], !is.na(path)) %>%
+      dplyr::filter(rv$df[,c(1:4)], !is.na(path)) %>%
          dplyr::select(-dataset) %>%
          dplyr::rename(dataset = prettynames)
    })
@@ -656,11 +622,18 @@ server <- function(input, output, session) {
 
    observeEvent(input$setproj, {
 
+      ## remove projpath from data paths whenever possible to increase portability
+      ## working on a copy, because working on the reactive rv$df causes checkAttrNames to reevaluate
+
+      df <- rv$df
+      df$path <- gsub(paste0(user_proj, "/"), "", df$path)
+
+
       final_log <- list(
          title = gsub(" ", "_", input$projtitle),
          projpath = paths$proj(),
          output_temp = file.path(paths$proj(), "intermediary"),
-         df = rv$df, # add back the datasets we're not using
+         df = df, # add back the datasets we're not using
          parameters = reactiveValuesToList(params)
       )
 

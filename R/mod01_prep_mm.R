@@ -197,13 +197,19 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
       })
 
 
+      # convert all names to lowercase for easier matching with mm_cols
+      mm[[i]] <- lapply(mm[[i]], function(x){
+         names(x) <- tolower(names(x))
+         return(x)
+      })
+
       # Each mm item is now NULL (no features), or a list of 1 or more items.
       # They might differ in number and names of columns so processing them right away before binding
 
 
       mm[[i]] <- lapply(mm[[i]], function(x){
 
-         dplyr::select(x, all_of(mm_cols)) %>%   # keep only cols we need,
+         dplyr::select(x, all_of(tolower(mm_cols))) %>%   # keep only cols we need,
             ## using names specified by user and renaming on the fly with our standard names
 
             dplyr::mutate(dplyr::across(where(is.list) & !attr(., "sf_column"),  # convert weird list-columns to character

@@ -1,10 +1,36 @@
 ### Custom functions
 
+
+# Check layer geometry -------------------------------------------------------
+
+# check if layer(s) has polygons and return name(s)
+
+check_layers <- function(folder){
+
+   files <- list.files(folder,
+                       pattern = paste0(c(".gpkg$", ".shp$", ".gml$", ".gz$", ".asc$", ".tif$"), collapse = "|"), # update to accept all file formats we might need
+                       recursive = TRUE,
+                       full.names = TRUE)
+
+   st_layers_V <- Vectorize(st_layers, vectorize.args = "dsn", SIMPLIFY = FALSE)
+
+   info <- st_layers_V(files)
+   info <- lapply(info, function(x) x$name[x$geomtype %in% c("Polygon", "Multi Polygon")])
+
+   name <- unique(unlist(info))
+
+   # length(name) >= 1  # is there at least one suitable layer
+
+}
+
+
+
+# Check attribute names-------------------------------------------------------
+
+
 checkAttrNames <- function(folder, type = "shp", layerstring = NULL, user_names, name = NULL){
 
    # Using st_read with a query of 0 rows only returns the headers and metadata.
-
-  # type <- ecoservR::guessFiletype(folder)  # identify file extension
 
    files <- list.files(folder, pattern = paste0(type, "$"), full.names = TRUE, recursive = TRUE)
 
@@ -17,21 +43,23 @@ checkAttrNames <- function(folder, type = "shp", layerstring = NULL, user_names,
       layername <- lapply(as.list(files), function(x) sf::st_layers(x)[[1]]) # layer name for each file
       #layername <- layername[grepl(layerstring, layername)] %>% unlist()
 
-      files <- files[grepl(layerstring, layername)] # subset to files with required layer
+      files <- files[grepl(layerstring, layername, ignore.case = TRUE)] # subset to files with required layer
+
    }
 
-if (is.null(layername)) stop("Could not find layer with specified name in this folder.")
+   if (is.null(layername)) stop("Could not find layer with specified name in this folder.")
 
    firstfilelayers <- sf::st_layers(files[[1]])[[1]]
 
    if (!is.null(layerstring)){
-   mylayer <- firstfilelayers[grepl(layerstring, firstfilelayers)]
+      mylayer <- firstfilelayers[grepl(layerstring, firstfilelayers, ignore.case = TRUE)]
    } else {
-   mylayer <- firstfilelayers[[1]]
-}
+      mylayer <- firstfilelayers[[1]]
+   }
    # import 0 rows from the data but returns headers (using first file that contains this layer)
    actualnames <- sf::st_read(files[[1]],
-                              layer = mylayer, query = paste("select * from \"", mylayer, "\" limit 0", sep=""),
+                              #layer = mylayer,
+                              query = paste("select * from \"", mylayer, "\" limit 0", sep=""),
                               quiet = TRUE)
 
    return(list(names(actualnames)))
@@ -43,25 +71,28 @@ if (is.null(layername)) stop("Could not find layer with specified name in this f
 
 guessFiletypeShiny <- function(path){
 
+
    if (!is.na(path) && path != "NA" && !is.null(path)){ # if the path is not NA, we check (otherwise return NA to be filtered out)
 
-   if (!dir.exists(path)){
-      detected <- "error folder"
-   } else {
+      if (!dir.exists(path)){
 
-   ## Get list of all (unique) file extensions and subset to accepted formats only
+         detected <- "error folder"
 
-   formats <- c(".shp$", ".gpkg$", ".json$", ".tif$", ".asc$", ".gz$", ".gml$")
+      } else {
 
-   detected <- list.files(path, pattern = paste(formats, collapse = "|"), recursive = TRUE) %>% # all files with ending
-      tools::file_ext() %>% unique()  # get unique extensions
+         ## Get list of all (unique) file extensions and subset to accepted formats only
 
-   if (length(detected) == 0) {
-      detected <- "error no"} else
-         if (length(detected) > 1){
-      detected <- detected
-         }
-   }
+         formats <- c(".shp$", ".gpkg$", ".json$", ".tif$", ".asc$", ".gz$", ".gml$")
+
+         detected <- list.files(path, pattern = paste(formats, collapse = "|"), recursive = TRUE) %>% # all files with ending
+            tools::file_ext() %>% unique()  # get unique extensions
+
+         if (length(detected) == 0) {
+            detected <- "error no"} else
+               if (length(detected) > 1){
+                  detected <- detected
+               }
+      }
    } else {
       detected <- NA_character_
    }
@@ -107,17 +138,17 @@ definePaths <- function(input, output, session, defaultpath = NULL, set = FALSE)
 
    volumes <- shinyFiles::getVolumes()      # recognise drives available locally
 
-# if supplying a default path:
+   # if supplying a default path:
 
    if (!is.null(defaultpath)){
 
-   # due to a bug in shinyfiles we need to create a new "volume" that is the full project path we want to direct the user to
+      # due to a bug in shinyfiles we need to create a new "volume" that is the full project path we want to direct the user to
 
       volumes <- c(volumes(), "Detected Project" = defaultpath)
       names(volumes) <- c(names(volumes)[1:(length(volumes)-1)], defaultpath)
 
       if (set == TRUE){
-       path$path <- defaultpath   # show path already only if we're pretty sure it's the one needed
+         path$path <- defaultpath   # show path already only if we're pretty sure it's the one needed
       }
 
 
@@ -146,16 +177,16 @@ definePaths <- function(input, output, session, defaultpath = NULL, set = FALSE)
    } else {
 
       # Find directory for a set of files - if no project folder specified present all computer
-   shinyFiles::shinyDirChoose(input, id = "dirChooseButton", root = volumes)  # associated with DirButton - gets a path
+      shinyFiles::shinyDirChoose(input, id = "dirChooseButton", root = volumes)  # associated with DirButton - gets a path
 
 
 
-# When clicking the browse button user can choose a different folder: save the path as a reactive
-   shiny::observeEvent(input$dirChooseButton, {
-      temppath <- try(shinyFiles::parseDirPath(volumes, input$dirChooseButton) %>% as.character())
-      req(temppath) # only assign to the reactive once there is a path
-      path$path <- temppath  # updates the reactive value when directory is selected
-   })
+      # When clicking the browse button user can choose a different folder: save the path as a reactive
+      shiny::observeEvent(input$dirChooseButton, {
+         temppath <- try(shinyFiles::parseDirPath(volumes, input$dirChooseButton) %>% as.character())
+         req(temppath) # only assign to the reactive once there is a path
+         path$path <- temppath  # updates the reactive value when directory is selected
+      })
 
    }
 
@@ -168,64 +199,13 @@ definePaths <- function(input, output, session, defaultpath = NULL, set = FALSE)
 }
 
 
-## MODULE TO POP UP A MODAL FOR LAYER NAMES ------
-
-
-# Modal module server
-modalModule <- function(input, output, session,
-                        layername = "layer or attribute", # dataset name
-                        holder="type something",
-                        searchlist) {  # a list of (lists of) layer names
-
-
-   myModal <- function(failed = FALSE) {
-      ns <- session$ns
-      modalDialog(
-         textInput(ns("entertext"), paste0("How is ", layername," named in your dataset?"),
-                   placeholder = holder
-         ),
-         if (failed)
-            div(tags$b("Invalid name, try again", style = "color: red;")),
-         actionButton(ns("ok"), "OK"),
-         easyClose = FALSE,
-         footer = NULL)
-   }
-
-   newname <- reactiveValues(good = NULL)
-
-
-   showModal(myModal())
-
-
-   # Verify input and prompt further or close on button click
-   observeEvent(input$ok, {
-
-      # Check that data object exists and is data frame - don't allow empty string
-      if (!is.null(input$entertext) && !input$entertext %in% c("", " ") &&
-          all(unlist(lapply(searchlist, function(x) any(grepl(input$entertext,x)))))
-      ){
-
-         # all good
-         newname$good <- input$entertext
-         removeModal()
-
-      } else {
-         showModal(myModal(failed = TRUE))
-      }
-   })
-
-   return(reactive(newname$good))
-}
-
-
-
 ## MODULE TO POP UP A MODAL FOR ATTRIBUTES ------
 
 # Modal module server
 attrPopupModule <- function(input, output, session,
-                        dataset = NULL,  # dataset name
-                        attrname = "attribute", # attribute name
-                        searchlist) {  # the actual attribute names extracted from dataset
+                            dataset = NULL,  # dataset name
+                            attrname = "attribute", # attribute name
+                            searchlist) {  # the actual attribute names extracted from dataset
 
 
    searchlist <- unlist(searchlist)  # the rv$realnames comes as a list
@@ -256,7 +236,7 @@ attrPopupModule <- function(input, output, session,
    observeEvent(input$ok, {
 
       # Check that data object exists and is data frame - don't allow empty string
-      if (!is.null(input$selectattr) && any(grepl(input$selectattr, searchlist))
+      if (!is.null(input$selectattr) && any(grepl(input$selectattr, searchlist, ignore.case = TRUE))
       ){
 
          # all good

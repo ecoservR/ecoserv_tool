@@ -38,7 +38,9 @@ add_CROME <- function(mm = parent.frame()$mm,
 
       crometype <- guessFiletype(cromepath)   # file type, gpkg or shp
 
-      crome_cols <- projectLog$df[projectLog$df$dataset == "crome", ][["cols"]][[1]]  # attributes
+      crome_cols <- tolower(  # making all lowercase for easier matching
+         projectLog$df[projectLog$df$dataset == "crome", ][["cols"]][[1]]  # attributes
+      )
 
 # DATA IMPORT ---------------------------------------------------------------------------------
 
@@ -52,9 +54,15 @@ crome <- loadSpatial(cromepath, filetype = crometype)  # using the loading into 
 
 # Crome data can be weird with inconsistent columns between regions... subset to just the columns we need first and THEN combine list elements
 
-crome <- lapply(crome, function(x) dplyr::rename(x, !!!crome_cols) %>%
-                   dplyr::select(cromeid, lucode) %>%
-                   sf::st_make_valid())
+crome <- lapply(crome, function(x){
+
+   names(x) <- tolower(names(x)) # make all lowercase for easier matching
+
+   x <- dplyr::select(x, all_of(crome_cols)) %>%
+                   sf::st_make_valid()
+
+   return(x)
+})
 
 
 crome <- do.call(rbind, crome) %>% sf::st_as_sf()

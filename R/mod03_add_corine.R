@@ -50,15 +50,17 @@ add_corine <- function(mm = parent.frame()$mm,
 
          corine <- do.call(rbind, corine) %>% sf::st_as_sf()  # putting back into one single sf object
 
+         # force all names to lowercase for easier matching
+         names(corine) <- tolower(names(corine))
 
-         corine_cols <- projectLog$df[projectLog$df$dataset == "corine", ][["cols"]][[1]]
+         # Get the column names ready
+         corine_cols <- tolower(  # make col names lowercase for easier matching
+            projectLog$df[projectLog$df$dataset == "corine", ][["cols"]][[1]]
+         )
 
-         # Rename columns if needed
-         corine <- dplyr::rename(corine, !!!corine_cols)
 
-
-         # Subset to only needed cols to lighten up the file
-         corine <- dplyr::select(corine, code)
+         # Rename and subset to only needed cols to lighten up the file
+         corine <- dplyr::select(corine, all_of(corine_cols))
 
 
          ## No need to import lookup table: it is built into the package so should just be called

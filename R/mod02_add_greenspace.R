@@ -48,7 +48,9 @@ add_greenspace <- function(mm = parent.frame()$mm,
    opengreenlayer <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["layer"]] # layer name
    opengreentype <- guessFiletype(opengreenpath) # data type, automatically determined
 
-   opengreen_cols <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["cols"]][[1]] # coerce to named character (remove list nesting)
+   opengreen_cols <- tolower( # make col names lowercase for easier matching
+      projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["cols"]][[1]]
+      ) # coerce to named character (remove list nesting)
 
 
    # DATA IMPORT ---------------------------------------------------------------------------------
@@ -58,11 +60,17 @@ add_greenspace <- function(mm = parent.frame()$mm,
 
    if (!is.na(greenpath) & !is.null(greenpath)){ # if greenpath is empty, skipping this step
 
-      green_cols <- projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["cols"]][[1]] # coerce to named character (remove list nesting)
+      green_cols <- tolower(projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["cols"]][[1]]) # coerce to named character (remove list nesting)
 
       greentype <- guessFiletype(greenpath) # data type; either gpkg or shp, automatically determined
 
       green <- loadSpatial(folder = greenpath, filetype = greentype)   # looks for and imports any shapefile within this folder, initially in a list
+
+      # force all names to lowercase for easier matching
+      green <- lapply(green, function(x){
+         names(x) <- tolower(names(x))
+         return(x)
+      })
    }
 
 
@@ -74,14 +82,9 @@ add_greenspace <- function(mm = parent.frame()$mm,
    if (exists("green")){
       message("Updating MasterMap with OS Greenspace")
 
-      ### Rename columns in case they are different for user
-      for (i in 1:length(green)){
-         green[[i]] <- dplyr::rename(green[[i]], !!green_cols)
-      }
-
       # Clean the green object to keep only what we need
 
-      green <- lapply(green, function(x) dplyr::select(x, TOID, priFunc) %>%  # keep only needed cols before merge
+      green <- lapply(green, function(x) dplyr::select(x, all_of((green_cols))) %>%  # keep only needed cols before merge
                          dplyr::mutate(TOID = gsub("[a-zA-Z ]", "", TOID))   # remove the "osgb" characters from the TOID column
       )
 
@@ -106,13 +109,6 @@ add_greenspace <- function(mm = parent.frame()$mm,
       ## Make sure features are clean before cropping
 
       green <- checkgeometry(green, "POLYGON")
-
-      ## Crop each tile to study area
-      #(the loop is written so that only polygons falling on the edge are clipped)
-      message("Clipping Greenspace to study area")
-      green <- suppressWarnings(
-         lapply(green, function(x) faster_intersect(x, studyAreaBuffer))
-      )
 
 
       ### Removing empty objects -----
@@ -169,15 +165,16 @@ add_greenspace <- function(mm = parent.frame()$mm,
 
       # Import the OPEN greenspace map (required)
 
-      opengreen <- loadSpatial(folder = opengreenpath, layer = opengreenlayer, filetype = opengreentype)
+      opengreen <- loadSpatial(folder = opengreenpath,
+                               layer = opengreenlayer,
+                               filetype = opengreentype)
       opengreen <- do.call(rbind, opengreen) %>% sf::st_as_sf()  # remove from list and store into one sf object
 
 
       message("Updating MasterMap with OS Open Greenspace")
 
       # Rename columns
-      opengreen <- dplyr::rename(opengreen, !!opengreen_cols)
-
+      names(opengreen) <- tolower(names(opengreen)) # force lowercase for easier matching
 
       ### Crop layer to study area and tidy up ----
 
@@ -186,7 +183,7 @@ add_greenspace <- function(mm = parent.frame()$mm,
       opengreen <- checkcrs(opengreen, studyAreaBuffer)
 
       opengreen <- opengreen %>%
-         dplyr::select(id, op_function) %>%           # keep only needed cols
+         dplyr::select(all_of(opengreen_cols)) %>%           # keep only needed cols
          faster_intersect(., studyAreaBuffer)
 
 

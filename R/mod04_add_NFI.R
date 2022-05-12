@@ -38,8 +38,9 @@ add_NFI <- function(mm = parent.frame()$mm,
 
       nfitype <- guessFiletype(nfipath)   # file type, gpkg or shp
 
-      nfi_cols <- projectLog$df[projectLog$df$dataset == "nfi", ][["cols"]][[1]]  # attributes
-
+      nfi_cols <- tolower(  # making all lowercase for easier matching
+         projectLog$df[projectLog$df$dataset == "nfi", ][["cols"]][[1]]  # attributes
+      )
 
    ## Data import -------------------------------------------------------------
 
@@ -55,7 +56,10 @@ add_NFI <- function(mm = parent.frame()$mm,
       message("Extracting NFI data...")
 
       # Rename columns if needed
-      nfi <- dplyr::rename(nfi, !!nfi_cols)
+
+      names(nfi) <- tolower(names(nfi)) # forcing lowercase attributes
+
+      nfi <- dplyr::select(nfi, all_of(nfi_cols))
 
       ## Check and set projection if needed
 

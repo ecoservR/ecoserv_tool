@@ -39,7 +39,9 @@ add_PHI <- function(mm = parent.frame()$mm,
 
       phitype <- guessFiletype(phipath)   # file type, gpkg or shp
 
-      phi_cols <- projectLog$df[projectLog$df$dataset == "phi", ][["cols"]][[1]]  # attributes
+      phi_cols <- tolower(  # making all lowercase for easier matching
+         projectLog$df[projectLog$df$dataset == "phi", ][["cols"]][[1]]  # attributes
+      )
 
 
 # DATA IMPORT ---------------------------------------------------------------------------------
@@ -54,8 +56,11 @@ add_PHI <- function(mm = parent.frame()$mm,
 # DATA PREP -----------------------------------------------------------------------------------
 
    # Rename columns
-   phi <- dplyr::rename(phi, !!!phi_cols) %>%
-      dplyr::select(bapHab = Main_Habit)  # remove and rename columns
+
+   names(phi) <- tolower(names(phi)) # forcing lowercase attributes
+
+   phi <- dplyr::select(phi, all_of(phi_cols)) %>%  # remove and rename columns
+      dplyr::select(bapHab = Main_Habit)
 
    phi <- checkcrs(phi, studyAreaBuffer)  # check and transform crs
 
