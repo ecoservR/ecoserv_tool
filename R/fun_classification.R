@@ -98,10 +98,12 @@ classif_mastermap <- function(x, params){
          # takes precedence over some previous classification
          # anything with Structure in the DescGroup gets converted to Structure code -----
 
+
          grepl("Building", Group) & shp_area > params$housemax ~ "J361",  # bigger than house is a business
          grepl("Building", Group) & shp_area < params$housemin ~ "J362",  # smaller than house is a shed
          grepl("Building", Group) & dplyr::between(shp_area, params$housemin, params$housemax) ~ "J360",  # domestic
          ## I did not include the proximity to a garden - not all houses have gardens?!
+         ## PROBLEM: a lot of farm buildings get classified as domestic...
 
          Group == "Glasshouse" ~ "J364",
 
@@ -235,7 +237,6 @@ classif_mastermap <- function(x, params){
 
 
          ## Rocky stuff -----
-         ## TO DO check Lucy's script for this section
 
          Term == "Scree" ~ "I12",
 
