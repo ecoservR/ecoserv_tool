@@ -146,6 +146,9 @@ capacity_access_nature <- function(x = parent.frame()$mm,
    access <- list(prow, crow, nnr, lnr)
    access <- access[sapply(access, function(x) length(x) > 0)]  # drop empty elements
 
+   # drop Z dimension
+   access <- lapply(access, function(x) sf::st_zm(x, drop = TRUE))
+
    access <- do.call(rbind, access)
 
    rm(prow, crow, lnr, nnr)
