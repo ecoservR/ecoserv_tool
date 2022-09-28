@@ -147,7 +147,9 @@ demand_access_nature <- function(x = parent.frame()$mm,
       ### Extract GI from basemap
 
       gi <- x %>%
-         dplyr::filter(GIpublic %in% c("Public", "Restricted") | (is.null(GIpublic) & GI == "Undetermined Greenspace"))
+         dplyr::filter(GIpublic %in% c("Public", "Restricted") | (is.na(GIpublic) & GI %in% c("Undetermined Greenspace",
+                                                       "Undertermined Greenspace")) # typo fix for legacy maps
+                                                                  )
 
       ## buffer to join up bits separated by paths etc
 

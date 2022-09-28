@@ -543,13 +543,13 @@ create_GI <- function(x, params){
          Make == "Manmade" ~ "Not Greenspace",
 
          grepl("Foreshore", Term) ~ "Beach Or Foreshore",
-         grepl("Agricultural Land", Term) ~ "Undertermined Greenspace",
+         grepl("Agricultural Land", Term) ~ "Undetermined Greenspace",
 
          Group == "Natural Environment" ~ "Natural",
 
          Make == "Multiple" & Term == "Multi Surface" & Group == "General Surface" & shp_area < params$gardensize & shp_index < params$gardenshape ~ "Private Garden", # most frequent combination for Private Garden
 
-         Group == "General Surface" & Make == "Natural" ~ "Undertermined Greenspace"
+         Group == "General Surface" & Make == "Natural" ~ "Undetermined Greenspace"
 
       ))
 

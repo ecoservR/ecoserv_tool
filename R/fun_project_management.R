@@ -327,6 +327,14 @@ get_final_map <- function(folder = NULL, filename = "final.RDS", projectLog = pa
 
    mm <- mm[,intersect(c("HabCode_B", accessnat, demandattr, airdemand, "elev"), names(mm))]
 
+
+   ### BUG FIX: fix typo in "Undetermined Greenspace" so that legacy maps (before correction) can still run properly
+   if ("GI" %in% names(mm) && "Undertermined Greenspace" %in% unique(mm$GI)){
+
+      mm$GI[!is.na(mm$GI) & mm$GI == "Undertermined Greenspace"] <- "Undetermined GI"
+   }
+
+
    message("Ready to map ecosystem services.")
 
    return({
