@@ -151,7 +151,9 @@ demand_access_nature <- function(x = parent.frame()$mm,
 
       ## buffer to join up bits separated by paths etc
 
-      gi <- gi %>% sf::st_buffer(2.5)
+      gi <- gi %>%
+         sf::st_buffer(2.5) %>%
+         checkgeometry()
 
       ## rasterize and then polygonize (faster than dissolving vector data)
 
