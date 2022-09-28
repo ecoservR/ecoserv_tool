@@ -8,7 +8,7 @@
 #' Focal Statistics Scores
 #'
 #' This function is a wrapper around terra::focal and performs focal statistics in a circle of a specified radius and for three use cases: sum, mean, or fraction cover.
-#'
+
 #' @param r The raster object on which to perform focal statistics
 #' @param radius The radius (in m) of the window used for focal statistics
 #' @param type The function to perform: either "sum" (sum all values in focal window), "mean" (average all values in focal window), or "cover" (fraction cover of a land class of interest). For "cover", the raster must have values of 1 for the feature of interest, and of 0 for the rest. NAs are not considered in sums and means.
@@ -23,7 +23,7 @@ focalScore <- function(r, radius, type){
 
    # Create circular focal window based on resolution of r and specified radius
 
-   fw <- terra::focalMat(r, radius, "circle")
+   fw <- terra::focalMat(r_spat_rast, radius, "circle")
 
 
    ## Calculate the focal statistics
