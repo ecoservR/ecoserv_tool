@@ -243,7 +243,8 @@ demand_noise_reg <- function(x = parent.frame()$mm,
       ##### 5 - Summing distance rasters #####
 
       # Sum rasters:
-      distances <- raster::brick(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)  # stack rasters
+      # NB: have to use stack function (originally brick, caused a bug)
+      distances <- raster::stack(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)  # stack rasters
       rm(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)
 
       distancescore <- raster::calc(distances, fun = sum, na.rm = TRUE)  #sum scores
