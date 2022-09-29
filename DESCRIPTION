@@ -24,6 +24,7 @@ Imports:
     lwgeom (>= 0.2.4),
     raster (>= 3.3.10),
     terra (>= 1.2.10),
+    exactextractr (>= 0.7.2),
     rasterVis(>= 0.50.2),
     fasterize (>= 1.0.1),
     tabularaster (>= 0.6.0),
