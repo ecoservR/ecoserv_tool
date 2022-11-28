@@ -265,11 +265,11 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
 
    # Raster mask - land only ---
    message("Creating mask for bodies of water")
-   watermask <- fasterize::fasterize(
-      dplyr::filter(x, HabBroad %in% c("Water, fresh", "Water, sea")),
-      r, background = NA)
+
+   watermask <- dplyr::filter(x, HabBroad %in% c("Water, fresh", "Water, sea"))
 
    if (nrow(watermask) > 0){
+   watermask <- fasterize::fasterize(watermask, r, background = NA)
    water_score <- raster::mask(water_score, watermask, inverse = TRUE)  # this sets water areas to NA
    }
    rm(watermask)
