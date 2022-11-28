@@ -269,9 +269,9 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
       dplyr::filter(x, HabBroad %in% c("Water, fresh", "Water, sea")),
       r, background = NA)
 
-
+   if (nrow(watermask) > 0){
    water_score <- raster::mask(water_score, watermask, inverse = TRUE)  # this sets water areas to NA
-
+   }
    rm(watermask)
 
    ### Create functional threshold mask ----
