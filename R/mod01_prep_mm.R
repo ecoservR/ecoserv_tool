@@ -90,6 +90,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    ## List all acceptable spatial files in folder
    fileList <- list.files(mmpath, pattern = paste0(mmtype, collapse="|"),
+                          ignore.case = TRUE,
                           recursive = TRUE, full.names = TRUE,
                           ignore.case = TRUE)
 

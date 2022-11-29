@@ -41,6 +41,7 @@ add_DTM <- function(mm = parent.frame()$mm,
       # Check all files at specified path
       dtm <- list.files(terrainpath, # folder with DTM tiles
                         pattern = paste(c(".asc$", ".tif$"),collapse="|"),  # find all tif or asc files
+                        ignore.case = TRUE, # sometimes extensions are all caps
                         all.files=TRUE, full.names=TRUE,
                         recursive = TRUE)
 
