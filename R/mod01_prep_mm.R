@@ -91,8 +91,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    ## List all acceptable spatial files in folder
    fileList <- list.files(mmpath, pattern = paste0(mmtype, collapse="|"),
                           ignore.case = TRUE,
-                          recursive = TRUE, full.names = TRUE,
-                          ignore.case = TRUE)
+                          recursive = TRUE, full.names = TRUE)
 
    if (length(fileList) == 0){stop("Cannot find MasterMap data. Please check file path and format.")}
 
