@@ -56,6 +56,9 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
          sf::st_set_crs(., 27700)  # set the crs manually to get rid of GDAL errors with init string format
    })
 
+   ## Drop Z dimension if it has one
+   studyArea <- sf::st_zm(studyArea, drop = TRUE)
+
    ### Buffer and union
 
    studyAreaBuffer <- sf::st_buffer(studyArea, studybuffer) %>% # create a buffer around the study area shape
