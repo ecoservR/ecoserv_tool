@@ -80,7 +80,7 @@ classif_mastermap <- function(x, params){
          grepl("Roadside", Group) & Make == "Natural" ~ "J12v",  # improve
          grepl("Roadside", Group) & Make %in% c("Manmade", "Unknown") ~ "J52",  # pavement
          grepl("Rail", Group) & Make != "Natural" ~ "J53",      # railway
-         grepl("Rail", Group) & Make == "Natural" ~ "Buu/C31",  # improve; rail verges
+         grepl("Rail", Group) & Make == "Natural" ~ "C31",  # improve; rail verges
          grepl("Path", Group) & Make == "Manmade" ~ "J54",      # sealed path
 
 
@@ -168,22 +168,32 @@ classif_mastermap <- function(x, params){
 
          Term %in% c(
             permute("Coniferous Trees", "Nonconiferous Trees", "Coppice Or Osiers"),
-            permute("Scrub", "Nonconiferous Trees", "Coniferous Trees")) ~ "A13/A2",  # forest with scrub
+            permute("Scrub", "Nonconiferous Trees", "Coniferous Trees"),
+            permute("Scrub", "Nonconiferous Trees", "Coniferous Trees", "Rock (Scattered)")) ~ "A13/A2",  # forest with scrub
 
          ## Scrub
          Term == "Scrub" ~ "A2",
          Term == "Coppice Or Osiers" ~ "A2",
+         Term %in% c(
+            permute("Coniferous Trees (Scattered)", "Scrub"),
+            permute("Coniferous Trees (Scattered)", "Scrub", "Boulders (Scattered)"),
+            permute("Nonconiferous Trees (Scattered)", "Scrub", "Boulders (Scattered)"),
+            permute("Coniferous Trees (Scattered)", "Scrub", "Rock (Scattered)")
+         ) ~ "A2",
+
 
          Term %in% c(
             permute("Scrub", "Coppice Or Osiers"),
             permute("Scrub", "Boulders (Scattered)"),
             permute("Scrub", "Rock (Scattered)")) ~ "A2",
 
-
          ## Scattered trees
          Term == "Nonconiferous Trees (Scattered)" ~ "A31",
          Term %in% c(
             permute("Nonconiferous Trees (Scattered)","Boulders (Scattered)"),
+            permute("Nonconiferous Trees (Scattered)","Rock"),
+            permute("Nonconiferous Trees (Scattered)","Boulders"),
+            permute("Nonconiferous Trees (Scattered)","Rock", "Boulders"),
             permute("Nonconiferous Trees (Scattered)","Rock (Scattered)")) ~ "A31",
          Term %in% permute("Scrub", "Nonconiferous Trees (Scattered)") ~ "A31/A2",
 
@@ -253,7 +263,8 @@ classif_mastermap <- function(x, params){
          Term %in% c("Shingle") ~ "H3",
 
          # Classifying coastal
-         Group == "Tidal Water" & Term != "Foreshore" ~ "G26",  # revise when testing coastal
+         Group == "Tidal Water" &
+            (Term != "Foreshore" | is.na(Term)) ~ "G26",  # no lookup yet
 
          Term %in% c(permute("Sand","Mud"),
                      permute("Mud","Sand"),
@@ -272,14 +283,19 @@ classif_mastermap <- function(x, params){
          Term %in% c(permute("Sand", "Rough Grassland")) ~ "H65",
          # probably sand dunes, which will get picked up by PHI
 
-         Term %in% c("Foreshore,Rock",
-                                "Rock,Foreshore",
-                                "Boulders,Foreshore",
-                                "Foreshore,Boulders") ~ "H13",
+         Term %in% c(
+            permute("Foreshore","Rock"),
+            permute("Boulders", "Sand"),
+            permute("Rock", "Shingle"),
+            permute("Rock", "Sand", "Shingle"),
+            permute("Boulders","Foreshore"),
+            permute("Boulders", "Shingle"),
+            permute("Boulders", "Rock", "Shingle")) ~ "H13",
 
          grepl("Saltmarsh", Term) ~ "H2u",
 
          grepl("Foreshore", Term) & Make != "Manmade" ~ "H1u",
+
 
 
 
@@ -337,6 +353,9 @@ classif_mastermap <- function(x, params){
             permute("Heath","Rough Grassland","Boulders (Scattered)", "Rock"),
             permute("Heath","Rough Grassland")) ~ "D5",
 
+         # catch-all for rest of heathery stuff
+
+         grepl("Heath", Term) ~ "Du",  # NEW
 
          Term %in% c("Reeds",
                                 permute("Reeds","Static Water")) ~ "F1",    # should it be swamp or something else?
@@ -385,6 +404,8 @@ classif_mastermap <- function(x, params){
          HabCode_B
       )
       )
+
+   return(x)
 }  # end of MasterMap classification function
 
 
@@ -403,11 +424,15 @@ classif_mastermap <- function(x, params){
 
 classif_phi <- function(x){
 
+   ## added grepl "J11" in many searches because putting crome/corine before PHI meant that several polygons were classified as arable and not picked up under PHI
+
    ## Do we need to add a OR is.na(HabCode_B) to each statement? Test on subset
 
    x <- x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
 
       # from MOST SPECIFIC to most general
+
+      HabCode_B == "J12v" ~ "J12v",  # avoid getting road verges mixed in with other J12 (amenity) polygons which could be overridden; verges shouldn't change
 
       ## Orchards
 
@@ -422,26 +447,32 @@ classif_phi <- function(x){
 
       ## Montane habitats
       phi == "Mountain heaths and willow scrub" &
-         (grepl("A", HabCode_B) | grepl("B", HabCode_B) | grepl("D", HabCode_B)) ~ "A2m",
+         grepl(paste0(c("A", "B", "D", "J11"), collapse = "|"), HabCode_B) ~ "A2m",
 
 
       ## Moorland (no trees)
-      phi == "Grass moorland" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B11m",
-      phi == "Grass moorland" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B11m",
+      phi == "Grass moorland" &
+         grepl(paste0(c("B", "D", "J11"), collapse = "|"), HabCode_B) &
+         !grepl("A", HabCode_B) ~ "B11m",
 
       ## Acid grassland
-      phi == "Lowland dry acid grassland" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B11",
-      phi == "Lowland dry acid grassland" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B11",
+      phi == "Lowland dry acid grassland" &
+         grepl(paste0(c("B", "D", "J11", "J12"), collapse = "|"), HabCode_B) &
+         !grepl("A", HabCode_B) ~ "B11",
 
       phi == "Lowland meadows" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B21",
+      phi == "Lowland meadows" & grepl(paste0(c("J11","J12"), collapse = "|"), HabCode_B) & !grepl("A", HabCode_B) ~ "B21", # in case mistakenly assigned as arable by corine/crome
+
 
       grepl("Calcareous grassland", phi, ignore.case = TRUE) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B31",
+      grepl("Calcareous grassland", phi, ignore.case = TRUE) & grepl(paste0(c("J11","J12"), collapse = "|"), HabCode_B) & !grepl("A", HabCode_B) ~ "B31", # in case mistakenly assigned as arable by corine/crome
       grepl("Calcareous grassland", phi, ignore.case = TRUE) & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B31",
 
       ## Floodplain or grazing marsh
-      grepl("Floodplain", phi, ignore.case = TRUE) & HabCode_B == "B4/J11" ~ "B4f",
       grepl("Floodplain", phi, ignore.case = TRUE) & grepl("B", HabCode_B) ~ "B4f",
+      grepl("Floodplain", phi, ignore.case = TRUE) & grepl(paste0(c("J11","J12"), collapse = "|"), HabCode_B) ~ "B4f", # in case mistakenly assigned as arable by corine/crome
       grepl("Floodplain", phi, ignore.case = TRUE) & grepl("A", HabCode_B) ~ "B4f",
+
 
       phi == "Purple moor grass and rush pastures"  & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "B5",
       phi == "Purple moor grass and rush pastures"  & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "B5",
@@ -449,20 +480,20 @@ classif_phi <- function(x){
       # all heathlands excluding montane scrub
       grepl("heath", phi) & !grepl("Mountain heaths", phi) & HabCode_B == "A2b" ~ "D/I1",
 
-      grepl("heath", phi) & !grepl("Mountain heaths", phi) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "Du",  # not sure if should include fragmented heath
+      grepl("heath", phi) & !grepl("Mountain heaths", phi) & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B)  & !grepl("A", HabCode_B) ~ "Du",  # not sure if should include fragmented heath
       grepl("heath", phi) & !grepl("Mountain heaths", phi) & HabCode_B %in% c("D/E", "D_B5/E3/F/H2") ~ "Du",
 
-      phi == "Upland flushes, fens and swamps" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "E2/E3/F1",
+      phi == "Upland flushes, fens and swamps" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) & !grepl("A", HabCode_B) ~ "E2/E3/F1",
       phi == "Upland flushes, fens and swamps" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "E2/E3/F1",
 
-      phi == "Lowland fens" & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "E3/F1",
+      phi == "Lowland fens" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) & !grepl("A", HabCode_B) ~ "E3/F1",
       phi == "Lowland fens" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "E3/F1",
 
       phi == "Blanket bog" & HabCode_B %in% c("Bu", "Bu1/Bu2", "B4/J11", "B5", "B5/E3/F/H3", "B5/E3/F/H3_Bu1/Bu2") ~ "E161",
-      phi == "Blanket bog" & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "E161",  # these should be E161?
+      phi == "Blanket bog" & grepl(paste0(c("B", "D"), collapse = "|"), HabCode_B) & !grepl("A", HabCode_B) ~ "E161",  # these should be E161
 
-      grepl("aised bog", phi) & grepl("B", HabCode_B) ~ "E162",
-      grepl("aised bog", phi) & grepl("D", HabCode_B) ~ "E162",
+      grepl("raised bog", phi, ignore.case = TRUE) & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) ~ "E162",
+      grepl("raised bog", phi, ignore.case = TRUE) & grepl(paste0(c("B", "D"), collapse = "|"), HabCode_B) & !grepl("A", HabCode_B) ~ "E162",
 
       phi == "Reedbeds" & grepl("B", HabCode_B) ~ "F1",
       phi == "Reedbeds" & grepl("D", HabCode_B) ~ "F1",
@@ -473,11 +504,11 @@ classif_phi <- function(x){
       phi == "Coastal sand dunes" & grepl("Heath", Term, ignore.case = TRUE) ~ "H66",
       phi == "Coastal sand dunes" & grepl("Scrub", Term, ignore.case = TRUE) ~ "H67",
       phi == "Coastal sand dunes" & grepl("H", HabCode_B) ~ "H6u",
-      phi == "Coastal sand dunes" & grepl("B", HabCode_B) ~ "H6u",
+      phi == "Coastal sand dunes" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) ~ "H6u",
       phi == "Coastal sand dunes" & grepl("D", HabCode_B) ~ "H6u",
 
       phi == "Coastal vegetated shingle" & grepl("H", HabCode_B) ~ "H3/H5",
-      phi == "Coastal vegetated shingle" & grepl("B", HabCode_B) ~ "H3/H5",
+      phi == "Coastal vegetated shingle" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) ~ "H3/H5",
       phi == "Coastal vegetated shingle" & grepl("D", HabCode_B) ~ "H3/H5",
       phi == "Coastal vegetated shingle" & grepl("A", HabCode_B) ~ "H3/H5",
 
@@ -485,26 +516,28 @@ classif_phi <- function(x){
       phi == "Mudflats" & grepl("H", HabCode_B) ~ "H11",
 
       phi == "Coastal saltmarsh" & grepl("H", HabCode_B) ~ "H2u",
-      phi == "Coastal saltmarsh" & grepl("B", HabCode_B) ~ "H2u",
+      phi == "Coastal saltmarsh" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) ~ "H2u",
       phi == "Coastal saltmarsh" & grepl("D", HabCode_B) ~ "H2u",
 
       phi == "Maritime cliff and slope" & HabCode_B %in% c("H1u", "I11/H8") ~ "H8",
-      phi == "Maritime cliff and slope" & grepl("B", HabCode_B) ~ "H8",
+      phi == "Maritime cliff and slope" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) ~ "H8",
       phi == "Maritime cliff and slope" & grepl("D", HabCode_B) ~ "H8",
 
       phi == "Limestone pavement" & grepl("I", HabCode_B) ~ "I13",
-      phi == "Limestone pavement" & grepl("B", HabCode_B) ~ "I13",
+      phi == "Limestone pavement" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) ~ "I13",
       phi == "Limestone pavement" & grepl("D", HabCode_B) ~ "I13",
 
 
       ## Calaminarian grassland is grassland community on heavy metal soils
-      phi == "Calaminarian grassland" & grepl("B", HabCode_B) ~ "Ic",
+      phi == "Calaminarian grassland" & grepl(paste0(c("B","J11","J12"), collapse = "|"), HabCode_B) ~ "Ic",
       phi == "Calaminarian grassland" & grepl("I", HabCode_B) ~ "Ic",
 
       # more general codes (unknown habitat types after rest has been classified)
 
       phi == "Good quality semi-improved grassland"  & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "Bu2",
+      phi == "Good quality semi-improved grassland"  & grepl(paste0(c("J11","J12"), collapse = "|"), HabCode_B) & !grepl("A", HabCode_B) ~ "Bu2",
       phi == "Good quality semi-improved grassland"  & grepl("D", HabCode_B) & !grepl("A", HabCode_B) ~ "Bu1",
+
 
       # any grassland that comes after the GQ semi improved is natural (unimproved)
       grepl("grassland", phi, ignore.case = TRUE) & grepl("B", HabCode_B) & !grepl("A", HabCode_B) ~ "Bu1",
@@ -517,10 +550,11 @@ classif_phi <- function(x){
       # phi == BROWN IN TABLE...WHAT BAP HABITAT?& grepl("D", habCode) ~ "J13",
    )
    )
+
+   return(x)
 }
 
 
-## after this, uncertain agri is still B4/J11
 
 # Classification with greenspace ------------------------------------------
 
@@ -554,7 +588,7 @@ create_GI <- function(x, params){
       ))
 
    }
-
+   return(x)
 }
 
 
@@ -569,7 +603,20 @@ create_GI <- function(x, params){
 
 classif_green <- function(x){
 
-  x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
+   # we'll use these a few times
+   amenity_classes <- c("Amenity",
+                        "Religious Grounds", "Cemetery",
+                        "Public Park Or Garden",
+                        "Play Space",
+                        "Bowling Green",
+                        "Golf Course",
+                        "Tennis Court",
+                        "Playing Field",
+                        "Other Sports Facility",
+                        "Institutional Grounds",
+                        "School Grounds")
+
+   x <- x %>% dplyr::mutate(HabCode_B = dplyr::case_when(
 
       GI == "Allotments Or Community Growing Spaces" & grepl("B", HabCode_B) ~ "J11t",
 
@@ -581,23 +628,15 @@ classif_green <- function(x){
 
       GI == "Camping Or Caravan Park" & HabCode_B == "B4/J11" ~ "J34",
 
-      # all amenity fields, if grassy, scattered trees or unknown
-      GI %in% c("Amenity",
-                "Religious Grounds", "Cemetery",
-                "Public Park Or Garden",
-                "Play Space",
-                "Bowling Green",
-                "Golf Course",
-                "Tennis Court",
-                "Playing Field",
-                "Other Sports Facility",
-                "Institutional Grounds",
-                "School Grounds") &  (grepl(paste0(c("A3", "B"), collapse = "|"), HabCode_B) | is.na(HabCode_B)) ~ "J12",
+      ## We make sure to assign a more natural code than J12 if we have some info on land cover (even if GI is amenity)
 
-      ### PREVIOUSLY:
-      #(grepl("B4/J11", HabCode_B)|is.na(HabCode_B))~ "J12",
-      # relaxed need of HabCode_B (was B4/J11)
-      # new edit; removed the is.na(phi) condition so reintroduced the B4J11
+      grepl("Agricultural Land", Term) & GI %in% amenity_classes ~ "B4", #NEW
+      grepl("Rough Grassland", Term) & GI %in% amenity_classes ~ HabCode_B, #NEW
+      grepl(paste0(c("Trees", "Scrub"), collapse = "|"), Term) & GI %in% amenity_classes ~ HabCode_B,
+
+
+      # all amenity fields, if we haven't found anything better suited
+      GI %in% amenity_classes &  (grepl(paste0(c("A3", "B"), collapse = "|"), HabCode_B) | is.na(HabCode_B)) ~ "J12",
 
 
 
@@ -613,9 +652,35 @@ classif_green <- function(x){
 
    )
    )
-
+   return(x)
 }
 
+
+
+
+# Classification with NFI -------------------------------------------------
+
+#' Classify Habitats Using National Forest Inventory
+#'
+#' Revises habitat classification of woodland. Currently only adds information for felled woodland. Not meant to be called directly; rather is used conditionally in classify_habitats().
+
+#' @param x A basemap sf object, which must contain the attributes HabCode_B and nfi.
+#' @return The basemap sf object with updated attribute HabCode_B
+#' @export
+
+classif_nfi <- function(x){
+
+   x <- dplyr::mutate(x,
+                      HabCode_B = dplyr::case_when(
+
+                         nfi == "Felled" & grepl("A", HabCode_B) ~ "A4",
+                         TRUE ~ HabCode_B
+
+                      ))
+
+   return(x)
+
+}
 
 # Classification with Corine and Crome ------------------------------------
 
@@ -636,58 +701,102 @@ classif_agri <- function(x){
       x <- dplyr::mutate(x,
                          HabCode_B = dplyr::case_when(
 
-                            # pastures
-                            HabCode_B %in% c("B4/J11", "B") &
+
+                            ## NEW: forest tracks (rides?) in a plantation tend to get assigned B4/J11 - we use corine and the shape ratio to identify them
+                            corine == "Coniferous forest" & shp_index > 5 & HabCode_B == "B4/J11" ~ "J512",
+
+                            ## NEW: let's preserve rough grasslands
+                            HabCode_B == "Bu" ~ "Bu",
+                            HabCode_B == "Bu1" ~ "Bu1",
+
+                            # don't do anything if crome is not an obviously agricultural type
+                            crome %in% c("Heathland and Bracken", "Heather", "Perennial Crops and Isolated Trees", "Water", "Trees and Scrubs, short Woody plants, hedgerows", "Unknown or Mixed Vegetation") ~ HabCode_B,
+
+                            HabCode_B == "J12v" ~ "J12v",  # avoid getting road verges mixed in with other J12 (amenity) polygons which could be overridden; verges shouldn't change
+
+                            # pastures, crome and corine in agreement
+                            grepl(paste0(c("B", "J11"#, "J12"
+                            ), collapse = "|"), HabCode_B) &
+                               !grepl("A", HabCode_B) & !grepl("B5", HabCode_B) & # don't allow marshy or stuff with trees (Bu_A etc) to creep in
                                corine == "Pastures" &
                                crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "B4/Bu",
 
-                            # crops
-                            HabCode_B %in% c("B4/J11", "B") & grepl("arable_land", corine) &
-                               !(crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land"))  ~ "J11",
+                            # crops, crome and corine in agreement
+                            grepl(paste0(c("B", "J11"#, "J12"
+                            ), collapse = "|"), HabCode_B) &
+                               !grepl("A", HabCode_B) & !grepl("B5", HabCode_B) & # don't allow stuff with trees (Bu_A etc) to creep in
+                               grepl(paste0(c("arable land", "crops", "cultivation"), collapse = "|"), corine) &
+                               !(crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land")) ~ "J11",
+
+                            # probably rough grazing (corine is natural)
+                            (grepl(paste0(c("B4", "J11"#, "J12"
+                            ), collapse = "|"), HabCode_B) | HabCode_B == "B") &
+                               corine %in% c("Natural grasslands", "Moors and heathland", "Peat bogs") ~ "Bu2",
+
+                            # pastures in disagreement (crome wins, but only if land already identified as probable agriculture to avoid converting natural grasslands)
+                            (grepl(paste0(c("B4", "J11"#, "J12"
+                            ), collapse = "|"), HabCode_B) | HabCode_B == "B") &
+                               crome == "Grass" ~ "B4",
+
+                            # arable in disagreement (crome wins, but only if land already identified as probable agriculture to avoid converting natural grasslands)
+                            (grepl(paste0(c("B4", "J11"#, "J12"
+                            ), collapse = "|"), HabCode_B) | HabCode_B == "B") &
+                               !(crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land")) ~ "J11",
+
 
                             # if a polygon was unclassified and crome is vegetated or corine is pastures
-                            Group == "Unclassified" &
-                              (corine == "Pastures" | !crome %in% c("Non-vegetated or sparsely-vegetated Land")) ~ "B4/J11",
+                            Group == "Unclassified" & Make == "Natural" &
+                               (grepl("arable land", "crops", "cultivation") | !crome %in% c("Non-vegetated or sparsely-vegetated Land")) ~ "B4/J11",
 
                             TRUE ~ HabCode_B
                          ))
    } else
       if (!is.null(x$corine) & is.null(x$crome)){
 
-   # If only CORINE is used, we split between pastures and arable but not as accurate as corine & crome agreeing
-
-      x <- dplyr::mutate(x,
-                         HabCode_B = dplyr::case_when(
-
-                            # pastures
-                            HabCode_B %in% c("B4/J11", "B") & corine == "Pastures" ~ "B4/Bu",
-
-                            # crops
-                            HabCode_B %in% c("B4/J11", "B") & grepl("arable_land", corine) ~ "J11",
-
-                            # unclassified things
-                            Group == "Unclassified" & grepl("arable_land", corine)  ~ "J11",
-                            Group == "Unclassified" & grepl("Pastures", corine)  ~ "B4/Bu",
-
-                            TRUE ~ HabCode_B
-                         ))
-      } else if (is.null(x$corine) & !is.null(x$crome)){
-   # If only CROME is used, we try to refine the unknown grasslands
+         # If only CORINE is used, we split between pastures and arable but not as accurate as corine & crome agreeing
 
          x <- dplyr::mutate(x,
                             HabCode_B = dplyr::case_when(
 
-            # pastures
-            HabCode_B %in% c("B4/J11", "B") & crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "B4/Bu",
+                               ## do not overwrite anything with a specific greenspace function
+                               !GI %in% c("Not Greenspace", "Undetermined Greenspace") & !is.na(GI) ~ HabCode_B,
 
-            # crops
-            HabCode_B %in% c("B4/J11", "B") & !crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "J11",
+                               ## NEW: forest tracks in a plantation tend to get assigned B4/J11 - we use corine and the shape ratio to identify them
+                               corine == "Coniferous forest" & shp_index > 50 & HabCode_B == "B4/J11" ~ "J512",
+
+                               # pastures
+                               HabCode_B %in% c("B4/J11", "B") & corine == "Pastures" ~ "B4/Bu",
+
+                               # crops
+                               HabCode_B %in% c("B4/J11", "B") & grepl("arable_land", corine) ~ "J11",
+
+                               # unclassified things
+                               Group == "Unclassified" & grepl("arable_land", corine) ~ "J11",
+                               Group == "Unclassified" & grepl("Pastures", corine) ~ "B4/Bu",
+
+                               TRUE ~ HabCode_B
+                            ))
+      } else if (is.null(x$corine) & !is.null(x$crome)){
+         # If only CROME is used, we try to refine the unknown grasslands
 
 
-            TRUE ~ HabCode_B
+         x <- dplyr::mutate(x,
+                            HabCode_B = dplyr::case_when(
+
+                               # NEW  don't do anything if crome is not an obviously agricultural type
+                               crome %in% c("Heathland and Bracken", "Heather", "Perennial Crops and Isolated Trees", "Water", "Trees and Scrubs, short Woody plants, hedgerows", "Unknown or Mixed Vegetation") ~ HabCode_B,
+
+                               # pastures
+                               HabCode_B %in% c("B4/J11", "B") & crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "B4/Bu",
+
+                               # crops
+                               HabCode_B %in% c("B4/J11", "B") & !crome %in% c("Grass", "Non-vegetated or sparsely-vegetated Land") ~ "J11",
+
+
+                               TRUE ~ HabCode_B
                             ))
 
-   }
+      }
 
 
    # Now if CROME is available we give it the last word in identifying pastures (regardless what CORINE says)
@@ -695,6 +804,9 @@ classif_agri <- function(x){
    if (!is.null(x$crome)){
       x <- dplyr::mutate(x,
                          HabCode_B = dplyr::case_when(
+
+                            # NEW don't do anything if crome is not an obviously agricultural type
+                            crome %in% c("Heathland and Bracken", "Heather", "Perennial Crops and Isolated Trees", "Water", "Trees and Scrubs, short Woody plants, hedgerows", "Unknown or Mixed Vegetation") ~ HabCode_B,
 
                             # pastures
                             HabCode_B == "B4/J11" &
@@ -707,6 +819,8 @@ classif_agri <- function(x){
                             TRUE ~ HabCode_B
                          ))
    }
+
+   return(x)
 }
 
 
@@ -773,8 +887,15 @@ classif_elev <- function(x, params){
          grepl("D", HabCode_B) & elev > params$montane ~ "D4",   # mountane heath / shrub
 
          ## Above a certain elevation (boundary between upland and lowland), we assume there are no crops and most grasslands would be semi-improved (rough grazing)
+         # NEW: REVISED TO REDUCE THAT ASSIGNMENT
 
-         HabCode_B %in% c("J11", "B4/J11", "B4/Bu", "B", "B4") & elev > params$upland ~ "Bu2",
+         HabCode_B %in% c(#"J11",
+            "B4/J11",
+            "Bu",
+            "B4/Bu",
+            "B"
+            #,"B4"
+         ) & elev > params$upland ~ "Bu2",
 
          TRUE ~ HabCode_B
       )

@@ -115,6 +115,14 @@ if ("phi" %in% attributes){
    mm <- lapply(mm, function(x) classif_phi(x))
 }
 
+# National Forest Inventory
+   if ("nfi" %in% attributes){
+
+      mm <- lapply(mm, function(x) classif_nfi(x))
+
+   }
+
+
 # Crome and Corine
 
    if (any(c("crome", "corine") %in% attributes)){
