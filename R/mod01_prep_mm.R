@@ -254,9 +254,15 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
    message("Clipping to study area...")
 
    ## identify core vs edge tiles
-   SAgrid <- ecoservR::grid[
-      lengths(sf::st_intersects(sf::st_set_crs(ecoservR::grid, 27700), studyAreaBuffer))>0,]
+   SAgrid <- suppressWarnings({
+      ecoservR::grid[
+      lengths(sf::st_intersects(sf::st_set_crs(ecoservR::grid, 27700), studyAreaBuffer))>0,] %>%
+      sf::st_set_crs(27700)
+   })
+
    is_core <- unlist(sf::st_contains(studyAreaBuffer,SAgrid))
+
+   message("Identified tiles to clip")
 
    ## Clip where necessary
    # (if a whole 10k tile is included within study area, no need)
