@@ -19,7 +19,7 @@ grid_study <- function(x){
    x <- checkcrs(x, 27700)
 
    # Intersect study area with grid
-   SAgrid <- suppressWarnings(sf::st_intersection(ecoservR::grid, sf::st_geometry(x)))
+   SAgrid <- suppressWarnings(sf::st_intersection(st_set_crs(ecoservR::grid, 27700), sf::st_geometry(x)))
    SAgrid$TILE_NAME <- droplevels(SAgrid$TILE_NAME)  # drop tile names not occuring in study area
    SAgrid <- split(SAgrid, SAgrid$TILE_NAME)    # convert to list
    SAgrid <- lapply(SAgrid, function(y) y %>%   # tidy up geometries (if study area has funky shape a tile might have disconnected parts of polygons)
