@@ -255,7 +255,7 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    ## identify core vs edge tiles
    SAgrid <- ecoservR::grid[
-      lengths(sf::st_intersects(ecoservR::grid, studyAreaBuffer))>0,]
+      lengths(sf::st_intersects(sf::st_set_crs(ecoservR::grid, 27700), studyAreaBuffer))>0,]
    is_core <- unlist(sf::st_contains(studyAreaBuffer,SAgrid))
 
    ## Clip where necessary
