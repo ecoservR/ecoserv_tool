@@ -95,7 +95,9 @@ add_socioeco <- function(mm = parent.frame()$mm,
    message("Importing Index of Multiple Deprivation (2019) data...")
 
    imd <- lapply(imd_tiles, function(x) readRDS(x)) # read file
-   imd <- do.call(rbind, imd)  # recombine
+   imd <- do.call(rbind, imd)   # recombine
+
+   imd <- checkcrs(imd, studyAreaBuffer) # make sure crs is the same
 
    # Clip to study area
    imd <- suppressWarnings({imd %>%
@@ -148,6 +150,8 @@ add_socioeco <- function(mm = parent.frame()$mm,
 
    census <- lapply(census_tiles, function(x) readRDS(x)) # read file
    census <- do.call(rbind, census)  # recombine
+
+   census <- checkcrs(census, studyAreaBuffer) # make sure CRS def is the same
 
    # Clip to study area
    census <- suppressWarnings({census %>%
