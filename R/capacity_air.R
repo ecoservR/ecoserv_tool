@@ -124,7 +124,7 @@ capacity_air_purif <- function(x = parent.frame()$mm,
    ### Create a distance mask (range within which we calculate scores)
 
    # We don't need x anymore, except for buffering to create mask around the capacity areas
-   x <- x %>% sf::st_buffer(buffer) %>% checkgeometry(., "POLYGON")
+   x <- x %>% sf::st_geometry() %>% sf::st_as_sf() %>% sf::st_buffer(buffer) %>% checkgeometry(., "POLYGON")
 
    if (use_hedges){
 
