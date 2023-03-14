@@ -108,6 +108,13 @@ classify_map <- function(mm = parent.frame()$mm,
 
 ## Depending on datasets, additional classification
 
+# Crome and Corine
+
+   if (any(c("crome", "corine") %in% attributes)){
+
+   mm <- lapply(mm, function(x) classif_agri(x))
+   }
+
 # Priority Habitats
 
 if ("phi" %in% attributes){
@@ -123,12 +130,6 @@ if ("phi" %in% attributes){
    }
 
 
-# Crome and Corine
-
-   if (any(c("crome", "corine") %in% attributes)){
-
-   mm <- lapply(mm, function(x) classif_agri(x))
-   }
 
 
 # Further decide on agricultural land based on size
