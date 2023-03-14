@@ -294,6 +294,9 @@ classif_mastermap <- function(x, params){
 
          grepl("Saltmarsh", Term) ~ "H2u",
 
+         Term %in% c(
+            permute("Mud","Shingle"),
+            permute("Mud","Shingle", "Sand")) ~ "H1u",
          grepl("Foreshore", Term) & Make != "Manmade" ~ "H1u",
 
 
