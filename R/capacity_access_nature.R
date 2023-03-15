@@ -67,6 +67,7 @@ capacity_access_nature <- function(x = parent.frame()$mm,
       dir.create(scratch)
    }
 
+   studyArea <- sf::st_zm(studyArea, drop=TRUE) # make sure study area doesn't have Z dim
 
    # if mm is stored in list, combine all before proceeding
    if (isTRUE(class(x) == "list")){
