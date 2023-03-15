@@ -222,6 +222,7 @@ importDesignatedAreas <- function(path, studyArea, dataset){
    df <- lapply(df, function(x)
       sf::st_geometry(x) %>%  # drop everything but geometry
          sf::st_as_sf() %>%
+         sf::st_zm(drop = TRUE) %>%
          sf::st_transform(27700))  # make sure they're all in OSGB
 
    df <- df[sapply(df, function(x) nrow(x) > 0)]
