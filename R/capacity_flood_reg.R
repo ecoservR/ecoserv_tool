@@ -59,7 +59,11 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
       dir.create(scratch)
    }
 
-
+   # if mm is stored in list, combine all before proceeding
+   if (isTRUE(class(x) == "list")){
+      message("Recombining basemap tiles")
+      x <- do.call(rbind, x) %>% sf::st_as_sf()
+   }
 
    ### Import DTM -----------
 
@@ -142,13 +146,7 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
    ## Now we should be working with one single dtm for the rest of the model. Phew!
 
 
-   ## Other data checks
 
-   # if mm is stored in list, combine all before proceeding
-   if (isTRUE(class(x) == "list")){
-      message("Recombining basemap tiles")
-      x <- do.call(rbind, x) %>% sf::st_as_sf()
-   }
 
    ### Check and import hedgerows ----
    if (use_hedges){
@@ -156,12 +154,12 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
       if (!file.exists(projectLog$clean_hedges)){stop("use_hedges is TRUE but no file found. Check projectLog$clean_hedges")}
 
       hedges <- readRDS(projectLog$clean_hedges) %>%
-         dplyr::mutate(HabCode_B = 'J21') %>%
+         dplyr::mutate(HabCode_B = 'J21') %>% dplyr::select(HabCode_B) %>%
          merge(hab_lookup[if (is.null(spr)) c("Ph1code",  "HabBroad", "Rough") else c("HabCode_B", "HabBroad", "Rough", spr)],
                by.x = 'HabCode_B', by.y = 'Ph1code', all.x = TRUE)
 
       message("Loaded hedges from ", projectLog$clean_hedges)
-
+      hedges <- rename_geometry(hedges, attr(x, "sf_column"))
    }
 
    # delete HabBroad because gets merged again with lookup

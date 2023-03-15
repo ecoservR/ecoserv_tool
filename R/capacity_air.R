@@ -82,10 +82,11 @@ capacity_air_purif <- function(x = parent.frame()$mm,
       if (!file.exists(projectLog$clean_hedges)){stop("use_hedges is TRUE but no file found. Check projectLog$clean_hedges")}
 
       hedges <- readRDS(projectLog$clean_hedges) %>%
-         dplyr::mutate(HabCode_B = 'J21') %>%
+         dplyr::mutate(HabCode_B = 'J21') %>% dplyr::select(HabCode_B) %>%
          merge(hab_lookup[c("Ph1code", "AirPurScore")], by.x = 'HabCode_B', by.y = 'Ph1code', all.x = TRUE)
 
       message("Loaded hedges from ", projectLog$clean_hedges)
+      hedges <- rename_geometry(hedges, attr(x, "sf_column"))
 
    }
 
@@ -138,8 +139,8 @@ capacity_air_purif <- function(x = parent.frame()$mm,
          raster::cover(hedges_r)
 
       # Add hedges to mask
-      hedges <- sf::st_geometry(hedges) %>%
-         sf::st_buffer(buffer) %>% sf::st_as_sf() %>%
+      hedges <- sf::st_geometry(hedges) %>% sf::st_as_sf() %>%
+         sf::st_buffer(buffer) %>%
          checkgeometry(., "POLYGON")
       x <- rbind(x, hedges)
    }

@@ -71,13 +71,20 @@ capacity_pollination <- function(x = parent.frame()$mm,
    }
 
 
+   # if mm is stored in list, combine all before proceeding
+   if (isTRUE(class(x) == "list")){
+      message("Recombining basemap tiles")
+      x <- do.call(rbind, x) %>% sf::st_as_sf()
+      # NOT using rbindlist here because only keeps the extent of the first tile
+   }
+
    ### If user chooses to use DTM, check and import
 
    if (!is.null(DTM)){
 
       dtm <- DTM
 
-      if(grepl(pattern = ".tif", DTM) | grepl(pattern = ".asc", DTM)){
+      if(grepl(pattern = paste0(c(".tif", ".asc", ".gr"), collapse = "|"), DTM, ignore.case = TRUE)){
 
          dtm <- dirname(DTM)  # if user gave full file name, we cut back to folder
       }
@@ -88,8 +95,8 @@ capacity_pollination <- function(x = parent.frame()$mm,
    ## Now no matter what, the object dtm should be a valid directory
    ## Does it contain a raster?
 
-   if (length(list.files(path = dtm, pattern = "tif")) == 0 &&  # any tif?
-       length(list.files(path = dtm, pattern = "asc")) == 0      # or any asc?
+   if (length(list.files(path = dtm, pattern = "tif",ignore.case = TRUE)) == 0 &&   # any tif?
+       length(list.files(path = dtm, pattern = "asc",ignore.case = TRUE)) == 0      # or any asc?
    ){
       stop("Cannot find elevation rasters at file path: ", dtm)
    }
@@ -134,12 +141,7 @@ capacity_pollination <- function(x = parent.frame()$mm,
 
    if (!is.null(elev) && !elev %in% names(x)) stop(paste0("Elevation attribute \"", elev, "\" not found in your basemap. Please specify attribute name with the \"elev\" argument, or set elev = NULL to ignore elevation."))
 
-   # if mm is stored in list, combine all before proceeding
-   if (isTRUE(class(x) == "list")){
-      message("Recombining basemap tiles")
-      x <- do.call(rbind, x) %>% sf::st_as_sf()
-      # NOT using rbindlist here because only keeps the extent of the first tile
-   }
+
 
    studyArea <- sf::st_zm(studyArea, drop=TRUE)
 
@@ -149,11 +151,11 @@ capacity_pollination <- function(x = parent.frame()$mm,
       if (!file.exists(projectLog$clean_hedges)){stop("use_hedges is TRUE but no file found. Check projectLog$clean_hedges")}
 
       hedges <- readRDS(projectLog$clean_hedges) %>%
-         dplyr::mutate(HabCode_B = 'J21') %>%
+         dplyr::mutate(HabCode_B = 'J21') %>% dplyr::select(HabCode_B) %>%
          merge(hab_lookup[c("Ph1code", "AirPurScore")], by.x = 'HabCode_B', by.y = 'Ph1code', all.x = TRUE)
 
       message("Loaded hedges from ", projectLog$clean_hedges)
-
+      hedges <- rename_geometry(hedges, attr(x, "sf_column"))
    }
 
    ### Merge the lookup table -----
@@ -194,13 +196,17 @@ capacity_pollination <- function(x = parent.frame()$mm,
    core <- dplyr::filter(x, HabCode_B %in% corehabs | HabBroad %in% corehabs)
 
    # Create buffer around core with distance specified
-   corebuffer <- sf::st_buffer(core, dist) %>% sf::st_make_valid()
+   corebuffer <- sf::st_buffer(core, dist) %>%
+      sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf() %>%
+      st_cast("MULTIPOLYGON") %>% st_cast("POLYGON")
 
    if (use_hedges){
       # add hedgerows to the corebuffer object
       hedges <- sf::st_buffer(hedges, dist) %>%
-         sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf()
+         sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf() %>%
+         st_cast("MULTIPOLYGON") %>% st_cast("POLYGON")
 
+      hedges <- rename_geometry(hedges, attr(corebuffer, "sf_column"))
       corebuffer <- rbind(corebuffer, hedges)
    }
 
