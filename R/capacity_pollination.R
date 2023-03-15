@@ -152,7 +152,7 @@ capacity_pollination <- function(x = parent.frame()$mm,
 
       hedges <- readRDS(projectLog$clean_hedges) %>%
          dplyr::mutate(HabCode_B = 'J21') %>% dplyr::select(HabCode_B) %>%
-         merge(hab_lookup[c("Ph1code", "AirPurScore")], by.x = 'HabCode_B', by.y = 'Ph1code', all.x = TRUE)
+         merge(hab_lookup[c("Ph1code",'HabBroad', 'HabClass')], by.x = 'HabCode_B', by.y = 'Ph1code', all.x = TRUE)
 
       message("Loaded hedges from ", projectLog$clean_hedges)
       hedges <- rename_geometry(hedges, attr(x, "sf_column"))
