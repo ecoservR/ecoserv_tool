@@ -335,7 +335,7 @@ capacity_pollination <- function(x = parent.frame()$mm,
    # Because Euclidean distances can still be slightly greater than the size of the buffer, we set all distances above threshold to NA
    pollin_r <- raster::reclassify(pollin_r,
                           rcl = c(668,Inf,NA),
-                          filename = file.path(scratch, "pollination_score"),
+                          filename = file.path(scratch, "pollination_score2"),
                           overwrite = TRUE)
 
    message("Distance raster created. Calculating likelihood of pollinator visit...")
@@ -343,7 +343,7 @@ capacity_pollination <- function(x = parent.frame()$mm,
    ### Calculate likelihoods -----
    pollin_r <- raster::writeRaster(
       exp(pollin_r*(-0.00104)),
-      filename = file.path(scratch, "pollination_score2"),
+      filename = file.path(scratch, "pollination_score3"),
       overwrite = TRUE  # because it's a temporary file we don't mind overwriting it if it exists
    )
 
