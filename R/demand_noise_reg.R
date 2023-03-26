@@ -167,11 +167,11 @@ demand_noise_reg <- function(x = parent.frame()$mm,
 
 
       ##### Importing OS VectorMap data #####
-
-      airports <- readRDS(system.file("extdata/vectormap/airports.RDS", package = "ecoservR"))
-      railways <- readRDS(system.file("extdata/vectormap/railways.RDS", package = "ecoservR"))
-      roads <- readRDS(system.file("extdata/vectormap/roads.RDS", package = "ecoservR"))
-
+   suppressWarnings({
+      airports <- readRDS(system.file("extdata/vectormap/airports.RDS", package = "ecoservR")) %>% sf::st_set_crs(27700)
+      railways <- readRDS(system.file("extdata/vectormap/railways.RDS", package = "ecoservR")) %>% sf::st_set_crs(27700)
+      roads <- readRDS(system.file("extdata/vectormap/roads.RDS", package = "ecoservR")) %>% sf::st_set_crs(27700)
+   })
 
       #### Clip them to the buffered study area
 
