@@ -158,6 +158,9 @@ capacity_pollination <- function(x = parent.frame()$mm,
       hedges <- rename_geometry(hedges, attr(x, "sf_column"))
    }
 
+   x <- checkcrs(x, 27700)
+   studyArea <- checkcrs(studyArea, 27700)
+
    ### Merge the lookup table -----
 
    x$HabBroad <- NULL
@@ -207,6 +210,7 @@ capacity_pollination <- function(x = parent.frame()$mm,
          st_cast("MULTIPOLYGON") %>% st_cast("POLYGON")
 
       hedges <- rename_geometry(hedges, attr(corebuffer, "sf_column"))
+      hedges <- checkcrs(hedges, 27700)
       corebuffer <- rbind(corebuffer, hedges)
    }
 

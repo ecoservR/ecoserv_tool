@@ -87,9 +87,12 @@ capacity_air_purif <- function(x = parent.frame()$mm,
 
       message("Loaded hedges from ", projectLog$clean_hedges)
       hedges <- rename_geometry(hedges, attr(x, "sf_column"))
+      hedges <- checkcrs(hedges, 27700)
 
    }
 
+   x <- checkcrs(x, 27700)
+   studyArea <- checkcrs(studyArea, 27700)
 
    ### Merge the lookup table -----
 

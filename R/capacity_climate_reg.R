@@ -66,6 +66,9 @@ capacity_climate_reg <- function(x = parent.frame()$mm,
 
    studyArea <- sf::st_zm(studyArea, drop=TRUE)
 
+   x <- checkcrs(x, 27700)
+   studyArea <- checkcrs(studyArea, 27700)
+
    ### Check and import hedgerows ----
    if (use_hedges){
 
@@ -77,6 +80,7 @@ capacity_climate_reg <- function(x = parent.frame()$mm,
 
       message("Loaded hedges from ", projectLog$clean_hedges)
       hedges <- rename_geometry(hedges, attr(x, "sf_column"))
+      hedges <- checkcrs(hedges, 27700)
 
    }
 

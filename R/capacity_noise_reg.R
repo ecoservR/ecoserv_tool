@@ -69,6 +69,9 @@ capacity_noise_reg <- function(x = parent.frame()$mm,
 
    studyArea <- sf::st_zm(studyArea, drop=TRUE)
 
+   x <- checkcrs(x, 27700)
+   studyArea <- checkcrs(studyArea, 27700)
+
    ### Check and import hedgerows ----
    if (use_hedges){
 
@@ -79,6 +82,7 @@ capacity_noise_reg <- function(x = parent.frame()$mm,
          merge(hab_lookup[c("Ph1code", "Noise")], by.x = 'HabCode_B', by.y = 'Ph1code', all.x = TRUE)
 
       message("Loaded hedges from ", projectLog$clean_hedges)
+      hedges <- checkcrs(hedges, 27700)
 
    }
 

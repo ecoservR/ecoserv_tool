@@ -65,6 +65,9 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
       x <- do.call(rbind, x) %>% sf::st_as_sf()
    }
 
+   x <- checkcrs(x, 27700)
+   studyArea <- checkcrs(studyArea, 27700)
+
    ### Import DTM -----------
 
    # Conditional import based on whether the user specified a folder or if we are reading from the project log.
@@ -160,6 +163,7 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
 
       message("Loaded hedges from ", projectLog$clean_hedges)
       hedges <- rename_geometry(hedges, attr(x, "sf_column"))
+      hedges <- checkcrs(hedges, 27700)
    }
 
    # delete HabBroad because gets merged again with lookup
