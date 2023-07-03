@@ -222,11 +222,17 @@ demand_air_purif <- function(x = parent.frame()$mm,
    ## This was actual distances but the score must be inversely proportional.
    ## From ecoservGIS:converted to log10 score and then to inverse score
 
-   # log10 of distance 0 is an error so we add 1 to everything
-   roadscore <- 1 - (log10(roadscore + 1) / log10(local))
+   if (terra::hasValues(roadscore)){
+      # log10 of distance 0 is an error so we add 1 to everything
+      roadscore <- 1 - (log10(roadscore + 1) / log10(local))
 
-   # score could be slightly negative (precision), so forcing to zero
-   roadscore[roadscore < 0] <- 0
+      # score could be slightly negative (precision), so forcing to zero
+      roadscore[roadscore < 0] <- 0
+
+   } else {
+      # in some cases there are no major roads in the study area and the outcome of distance_from_source is an empty raster
+      terra::values(roadscore) <- 0
+   }
 
 
 
