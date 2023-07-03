@@ -145,7 +145,7 @@ demand_noise_reg <- function(x = parent.frame()$mm,
 
 
    # Create a buffer around the study area (to clip roads with some margin)
-   SAbuffer <- sf::st_buffer(sf::st_geometry(studyArea), 500) %>% sf::st_as_sf()
+   SAbuffer <- sf::st_buffer(sf::st_geometry(studyArea), 500) %>% sf::st_as_sf() %>% st_transform(27700)
 
 
    # Create raster with same properties as mastermap to use as a template
@@ -247,11 +247,20 @@ demand_noise_reg <- function(x = parent.frame()$mm,
       distances <- raster::stack(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)  # stack rasters
       rm(dist_motor, dist_roadsA, dist_dualcarriageways, dist_rail, dist_air)
 
-      distancescore <- raster::calc(distances, fun = sum, na.rm = TRUE)  #sum scores
+      if (terra::hasValues(distances)){
+         distancescore <- raster::calc(distances, fun = sum, na.rm = TRUE)  #sum scores
 
-      # score could be slightly negative (precision), so forcing to zero
-      distancescore[distancescore < 0] <- 0
+         # score could be slightly negative (precision), so forcing to zero
+         distancescore[distancescore < 0] <- 0
 
+      } else {
+
+         # if no noise sources at all in study area, set raster to 0
+
+         distancescore <- r
+         terra::values(distancescore) <- 0
+
+      }
 
       # save raw indicator
       if (indicators){
