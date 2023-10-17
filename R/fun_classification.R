@@ -169,7 +169,8 @@ classif_mastermap <- function(x, params){
          Term %in% c(
             permute("Coniferous Trees", "Nonconiferous Trees", "Coppice Or Osiers"),
             permute("Scrub", "Nonconiferous Trees", "Coniferous Trees"),
-            permute("Scrub", "Nonconiferous Trees", "Coniferous Trees", "Rock (Scattered)")) ~ "A13/A2",  # forest with scrub
+            permute("Scrub", "Nonconiferous Trees", "Coniferous Trees", "Rock (Scattered)"),
+            permute("Scrub", "Nonconiferous Trees", "Coniferous Trees", "Boulders (Scattered)")) ~ "A13/A2",  # forest with scrub
 
          ## Scrub
          Term == "Scrub" ~ "A2",
@@ -320,7 +321,16 @@ classif_mastermap <- function(x, params){
             permute("Marsh","Nonconiferous Trees","Coniferous Trees", "Scrub")) ~ "B5_Au",
 
 
-         Term %in% permute("Marsh","Rough Grassland") ~ "B5",
+         Term %in% c(
+            permute("Marsh","Rough Grassland"),
+            permute("Marsh","Rough Grassland", "Boulders"),
+            permute("Marsh","Rough Grassland", "Boulders (Scattered)"),
+            permute("Marsh","Rough Grassland", "Rock"),
+            permute("Marsh","Rough Grassland", "Rock (Scattered)"),
+            permute("Marsh", "Rock"),
+            permute("Marsh", "Boulders"),
+            permute("Marsh", "Rock (Scattered)"),
+            permute("Marsh", "Boulders (Scattered)")) ~ "B5",
 
          ## Heathlands ----
 
