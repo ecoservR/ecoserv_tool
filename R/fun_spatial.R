@@ -89,6 +89,7 @@ functionalMask <- function(x, local = 0, res, proportion = 0.10, threshold){
                         directions = 8,  # looking for neighbouring cells in all 8 directions
                         return_raster = TRUE)[[1]][[1]]  #[[1]][[1]] extracts the raster from the (nested) list (bug fix for landscapemetrics 1.5.3)
 
+   patch <- raster::raster(patch) # fix as landscapemetrics now returns terra Spatrasters
 
    # Calculate area of each patch, creating an index of which ID need to be removed
 
