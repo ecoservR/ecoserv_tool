@@ -167,6 +167,7 @@ classif_mastermap <- function(x, params){
          Term %in% c(
             permute("Coniferous Trees", "Nonconiferous Trees", "Shingle"),
             permute("Coniferous Trees", "Nonconiferous Trees", "Boulders (Scattered)"),
+            permute("Coniferous Trees", "Nonconiferous Trees", "Boulders (Scattered)", "Rock (Scattered)"),
             permute("Coniferous Trees", "Nonconiferous Trees", "Rock (Scattered)")) ~ "A13",  # forest with boulders
 
 
