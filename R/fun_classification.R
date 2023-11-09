@@ -259,6 +259,9 @@ classif_mastermap <- function(x, params){
          Term %in% c(
             "Boulders",
             permute("Boulders","Rock"),
+            permute("Boulders (Scattered)","Rock"),
+            permute("Boulders","Rock (Scattered)"),
+            permute("Boulders","Rock"),
             "Boulders (Scattered)")  ~ "I14b",
 
          Term %in% c("Rock",
