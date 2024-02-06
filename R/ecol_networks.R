@@ -348,7 +348,7 @@ source <- source %>%
       }
 
 
-   } else {message("No networks larger than functional threshold (",treshold, " ha) in your study area")}
+   } else {message("No networks larger than functional threshold (",threshold, " ha) in your study area")}
 
 
 }
