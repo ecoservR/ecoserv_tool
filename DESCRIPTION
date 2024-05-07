@@ -1,19 +1,23 @@
 Package: ecoservR
 Type: Package
-Title: A Toolkit for Mapping Ecosystem Services
-Version: 0.1.0
+Title: Natural Capital Mapping Toolkit (UK)
+Version: 0.2.0
 Authors@R: c(
-    person("Sandra", "Angers-Blondin", email = "s.angers-blondin@ljmu.ac.uk", role = c("aut","cre")),
-    person("Karl", "Buskdieker", role = "aut"),
     person("Chloe", "Bellamy", role = "aut"),
-    person("Jim", "Rouquette", role = "aut"),
-    person("Alison", "Holt", role = "aut"),
+    person("Jonathan", "Winn", role = "aut"),
+    person("Sandra", "Angers-Blondin", email = "s.angers-blondin@ljmu.ac.uk", role = c("aut","cre", "trl")),
+    person("Luke", "Bentley", role = "aut"),
+    person("Noémie", "Bonnin", role = "aut"),
+    person("Karl", "Buskdieker", role = "aut"),
+    person("Hannah", "Partoft", role = "aut"),
+    person("Jim", "Rouquette", role = "ctb"),
+    person("Alison", "Holt", role = "ctb"),
     person("Colm", "Bowe", role = "aut")
     )
-Description: EcoservR is a toolkit for generating an environmental baseline (in the UK) using widely available national datasets.
-    Seven ecosystem services can currently be mapped: carbon storage, air purification, water purification,
-    pollination, climate regulation, noise regulation, and access to nature.
-License: MIT + file LICENSE
+Description: A toolkit for mapping and measuring natural capital and ecosystem services (in 
+    the UK) using widely available national datasets. A re-write and update of the 
+    defunct [Ecoserv-GIS tool](https://www.nature.scot/doc/naturescot-research-report-954-ecoserv-gis-v33-toolkit-mapping-ecosystem-services-gb-scale).
+License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
 Imports:
@@ -48,4 +52,4 @@ Imports:
     gtools
 RoxygenNote: 7.1.1
 Depends: 
-    R (>= 2.10)
+    R (>= 3.5.0)
