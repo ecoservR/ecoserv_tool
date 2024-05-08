@@ -41,7 +41,7 @@ getProjectLog <- function(wd = NULL){
 #' This function finds the project log saved in the working directory and overwrites it with the new log
 
 #' @param projlog The updated project log to be saved
-#' @return
+#' @return Updated project log is saved in the project folder
 #' @export
 updateProjectLog <- function(projlog){
 
@@ -238,6 +238,7 @@ resumeProject <- function(folder = NULL, trustlog = FALSE){
 #' @param filename A character string to match to file names in the folder and identify the file to load. Default to "final.RDS"
 #' @param projectLog The project log file which will be used to find the files on disk
 
+#' @return the classified basemap, as a list of sf tiles
 #' @export
 get_final_map <- function(folder = NULL, filename = "final.RDS", projectLog = parent.frame()$projectLog){
 

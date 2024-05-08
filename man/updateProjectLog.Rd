@@ -10,7 +10,7 @@ updateProjectLog(projlog)
 \item{projlog}{The updated project log to be saved}
 }
 \value{
-
+Updated project log is saved in the project folder
 }
 \description{
 This function finds the project log saved in the working directory and overwrites it with the new log

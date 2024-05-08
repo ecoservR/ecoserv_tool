@@ -4,12 +4,21 @@
 \alias{get_final_map}
 \title{Retrieve Final Basemap}
 \usage{
-get_final_map(folder = NULL, filename = "final.RDS")
+get_final_map(
+  folder = NULL,
+  filename = "final.RDS",
+  projectLog = parent.frame()$projectLog
+)
 }
 \arguments{
 \item{folder}{Folder in which the final version of the basemap is saved (by default the "final" subfolder in the project's folder)}
 
 \item{filename}{A character string to match to file names in the folder and identify the file to load. Default to "final.RDS"}
+
+\item{projectLog}{The project log file which will be used to find the files on disk}
+}
+\value{
+the classified basemap, as a list of sf tiles
 }
 \description{
 This function loads the final basemap saved for a project and prepares it in order to run ecosystem service models.
