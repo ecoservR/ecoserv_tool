@@ -73,7 +73,7 @@ add_socioeco <- function(mm = parent.frame()$mm,
 
    # Create columns to receive data
 
-   mm <- lapply(mm, function(x) mutate(x,
+   mm <- lapply(mm, function(x) dplyr::mutate(x,
                                        housePop = NA_real_,
                                        health = NA_real_,
                                        riskgroup = NA_real_))

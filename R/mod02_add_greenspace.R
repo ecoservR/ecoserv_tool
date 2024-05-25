@@ -84,7 +84,7 @@ add_greenspace <- function(mm = parent.frame()$mm,
 
       # Clean the green object to keep only what we need
 
-      green <- lapply(green, function(x) dplyr::select(x, all_of((green_cols))) %>%  # keep only needed cols before merge
+      green <- lapply(green, function(x) dplyr::select(x, tidyselect::all_of((green_cols))) %>%  # keep only needed cols before merge
                          dplyr::mutate(TOID = gsub("[a-zA-Z ]", "", TOID))   # remove the "osgb" characters from the TOID column
       )
 
@@ -148,7 +148,7 @@ add_greenspace <- function(mm = parent.frame()$mm,
       } else {
          message("No Greenspace features within your study area.")
          # add a priFunc column anyway (with NA values)
-         mm <- lapply(mm, function(x) mutate(x, priFunc = NA))
+         mm <- lapply(mm, function(x) dplyr::mutate(x, priFunc = NA))
          }
 
    } else {

@@ -59,7 +59,7 @@ add_NFI <- function(mm = parent.frame()$mm,
 
       names(nfi) <- tolower(names(nfi)) # forcing lowercase attributes
 
-      nfi <- dplyr::select(nfi, all_of(nfi_cols))
+      nfi <- dplyr::select(nfi, tidyselect::all_of(nfi_cols))
 
       ## Check and set projection if needed
 

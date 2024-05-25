@@ -7,6 +7,8 @@
 distance_from_source(x, r, feature, maxdist)
 }
 \arguments{
+\item{x}{the source object(s), as sf polygons}
+
 \item{r}{a template raster of the desired extent and resolution}
 
 \item{feature}{feature name for informative messages}
@@ -18,5 +20,4 @@ a raster where cell values are distance in meters from sources (which have value
 }
 \description{
 Generate a raster of distances from source(s), restricted to a maximum search distance.
-#' @param x the source object(s), as sf polygons
 }

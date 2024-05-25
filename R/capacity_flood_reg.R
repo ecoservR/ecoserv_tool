@@ -122,9 +122,9 @@ capacity_flood_reg <- function(x = parent.frame()$mm,
 
 
    # Keep only those intersecting with basemap extent
-   ex <- as(raster::extent(x), "SpatialPolygons")
+   ex <- methods::as(raster::extent(x), "SpatialPolygons")
 
-   dtm <- dtm[sapply(dtm, function(x) rgeos::gIntersects(as(raster::extent(x), "SpatialPolygons"), ex))]
+   dtm <- dtm[sapply(dtm, function(x) rgeos::gIntersects(methods::as(raster::extent(x), "SpatialPolygons"), ex))]
 
    if (length(dtm) == 0) {stop("DTM doesn't intersect your study area.")} else
       if(length(dtm) == 1){

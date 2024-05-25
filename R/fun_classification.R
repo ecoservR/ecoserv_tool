@@ -852,6 +852,7 @@ classif_agri <- function(x){
 #' Revises habitat classification of agricultural land using the parameters set with the project. Not meant to be called directly; rather is used conditionally in classify_habitats().
 
 #' @param x A basemap sf object
+#' @param params A list of parameters used as thresholds to classify certain habitats. See EcoservR documentation.
 #' @return The basemap sf object with updated attribute HabCode_B
 #' @export
 
@@ -878,6 +879,7 @@ classif_area <- function(x, params){
 #' Revises habitat classification of agricultural land and upland habitats using the parameters set with the project. Not meant to be called directly; rather is used conditionally in classify_habitats().
 
 #' @param x A basemap sf object with the "elev" and "slope" attributes
+#' @param params A list of parameters used as thresholds to classify certain habitats. See EcoservR documentation.
 #' @return The basemap sf object with updated attribute HabCode_B
 #' @export
 

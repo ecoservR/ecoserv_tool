@@ -60,7 +60,7 @@ add_corine <- function(mm = parent.frame()$mm,
 
 
          # Rename and subset to only needed cols to lighten up the file
-         corine <- dplyr::select(corine, all_of(corine_cols))
+         corine <- dplyr::select(corine, tidyselect::all_of(corine_cols))
 
 
          ## No need to import lookup table: it is built into the package so should just be called
@@ -174,7 +174,7 @@ add_corine <- function(mm = parent.frame()$mm,
 
 
 
-            ex <- sf::st_as_sf(as(1.25*raster::extent(studyAreaBuffer), "SpatialPolygons")) %>% # create polygon out of study area extent
+            ex <- sf::st_as_sf(methods::as(1.25*raster::extent(studyAreaBuffer), "SpatialPolygons")) %>% # create polygon out of study area extent
                sf::st_set_crs(sf::st_crs(studyAreaBuffer)) %>%  # set its crs to enable transfo
                sf::st_transform(3035)  # project it in Corine's projection (EPSG:3035)
 

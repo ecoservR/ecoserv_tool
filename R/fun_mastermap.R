@@ -19,7 +19,7 @@ grid_study <- function(x){
    x <- checkcrs(x, 27700)
 
    # Intersect study area with grid
-   SAgrid <- suppressWarnings(sf::st_intersection(sf::st_set_crs(ecoservR::grid, 27700), sf::st_geometry(x)))
+   SAgrid <- suppressWarnings(sf::st_intersection(sf::st_set_crs(grid, 27700), sf::st_geometry(x)))
    SAgrid$TILE_NAME <- droplevels(SAgrid$TILE_NAME)  # drop tile names not occuring in study area
    SAgrid <- split(SAgrid, SAgrid$TILE_NAME)    # convert to list
    SAgrid <- lapply(SAgrid, function(y) y %>%   # tidy up geometries (if study area has funky shape a tile might have disconnected parts of polygons)
@@ -53,7 +53,7 @@ getFileExtent <- function(fileList, layer){
          # create and return the object
          raster::extent(info$extent %>%
                            matrix(., byrow=FALSE, ncol =2)) %>%
-            as(., "SpatialPolygons") %>%
+            methods::as(., "SpatialPolygons") %>%
             sf::st_as_sf() %>% sf::st_set_crs(info$wkt2)
       },
       x = fileList,
@@ -80,7 +80,7 @@ getFileExtent <- function(fileList, layer){
          # create and return the object
          raster::extent(info$extent %>%
                            matrix(., byrow=FALSE, ncol =2)) %>%
-            as(., "SpatialPolygons") %>%
+            methods::as(., "SpatialPolygons") %>%
             sf::st_as_sf() %>% sf::st_set_crs(info$wkt2)
       })
 

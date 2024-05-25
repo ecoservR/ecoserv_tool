@@ -59,7 +59,7 @@ add_PHI <- function(mm = parent.frame()$mm,
 
    names(phi) <- tolower(names(phi)) # forcing lowercase attributes
 
-   phi <- dplyr::select(phi, all_of(phi_cols)) %>%  # remove and rename columns
+   phi <- dplyr::select(phi, tidyselect::all_of(phi_cols)) %>%  # remove and rename columns
       dplyr::select(bapHab = Main_Habit)
 
    phi <- checkcrs(phi, studyAreaBuffer)  # check and transform crs

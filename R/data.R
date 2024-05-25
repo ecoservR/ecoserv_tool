@@ -35,7 +35,6 @@
 #'   \item{Noise}{Noise regulation capacity for a given habitat (0-100)}
 #'   \item{Rough}{Manning's surface roughness coefficient for a given habitat}
 #'   \item{Naturalness}{Perceived naturalness for a given habitat (0-10)}
-#'   \item{Food}{Food production capacity for a given habitat (0-10), adapted from Alison Smith's 2019 Natural capital in Oxfordshire report}
 #' }
 "hab_lookup"
 

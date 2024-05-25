@@ -8,6 +8,8 @@ classif_area(x, params)
 }
 \arguments{
 \item{x}{A basemap sf object}
+
+\item{params}{A list of parameters used as thresholds to classify certain habitats. See EcoservR documentation.}
 }
 \value{
 The basemap sf object with updated attribute HabCode_B

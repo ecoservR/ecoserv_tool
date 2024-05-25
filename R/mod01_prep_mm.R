@@ -212,10 +212,10 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
       mm[[i]] <- lapply(mm[[i]], function(x){
 
-         dplyr::select(x, all_of(tolower(mm_cols))) %>%   # keep only cols we need,
+         dplyr::select(x, tidyselect::all_of(tolower(mm_cols))) %>%   # keep only cols we need,
             ## using names specified by user and renaming on the fly with our standard names
 
-            dplyr::mutate(dplyr::across(where(is.list) & !attr(., "sf_column"),  # convert weird list-columns to character
+            dplyr::mutate(dplyr::across(tidyselect::where(is.list) & !attr(., "sf_column"),  # convert weird list-columns to character
                                         ecoservR::list_to_char))  %>%
             dplyr::filter(PhysicalLevel != "51",  # remove things above ground level
                           Group != "Landform" ) %>%
@@ -255,8 +255,8 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
 
    ## identify core vs edge tiles
    SAgrid <- suppressWarnings({
-      ecoservR::grid[
-      lengths(sf::st_intersects(sf::st_set_crs(ecoservR::grid, 27700), studyAreaBuffer))>0,] %>%
+      grid[
+      lengths(sf::st_intersects(sf::st_set_crs(grid, 27700), studyAreaBuffer))>0,] %>%
       sf::st_set_crs(27700)
    })
 

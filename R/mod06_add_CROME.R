@@ -58,7 +58,7 @@ crome <- lapply(crome, function(x){
 
    names(x) <- tolower(names(x)) # make all lowercase for easier matching
 
-   x <- dplyr::select(x, all_of(crome_cols)) %>%
+   x <- dplyr::select(x, tidyselect::all_of(crome_cols)) %>%
                    sf::st_make_valid()
 
    return(x)

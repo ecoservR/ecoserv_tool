@@ -115,9 +115,9 @@ capacity_pollination <- function(x = parent.frame()$mm,
    dtm <- lapply(dtm, function(x) raster::raster(x))
 
    # Keep only those intersecting with basemap extent
-   ex <- as(raster::extent(x), "SpatialPolygons")
+   ex <- methods::as(raster::extent(x), "SpatialPolygons")
 
-   dtm <- dtm[sapply(dtm, function(x) rgeos::gIntersects(as(raster::extent(x), "SpatialPolygons"), ex))]
+   dtm <- dtm[sapply(dtm, function(x) rgeos::gIntersects(methods::as(raster::extent(x), "SpatialPolygons"), ex))]
 
    if (length(dtm) == 0) {stop("DTM doesn't intersect your study area.")} else
       if (length(dtm) == 1){
@@ -201,13 +201,13 @@ capacity_pollination <- function(x = parent.frame()$mm,
    # Create buffer around core with distance specified
    corebuffer <- sf::st_buffer(core, dist) %>%
       sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf() %>%
-      st_cast("MULTIPOLYGON") %>% st_cast("POLYGON")
+      sf::st_cast("MULTIPOLYGON") %>% sf::st_cast("POLYGON")
 
    if (use_hedges){
       # add hedgerows to the corebuffer object
       hedges <- sf::st_buffer(hedges, dist) %>%
          sf::st_make_valid() %>% sf::st_geometry() %>% sf::st_as_sf() %>%
-         st_cast("MULTIPOLYGON") %>% st_cast("POLYGON")
+         sf::st_cast("MULTIPOLYGON") %>% sf::st_cast("POLYGON")
 
       hedges <- rename_geometry(hedges, attr(corebuffer, "sf_column"))
       hedges <- checkcrs(hedges, 27700)

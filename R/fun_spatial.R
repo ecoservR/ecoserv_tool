@@ -138,13 +138,13 @@ functionalMask <- function(x, local = 0, res, proportion = 0.10, threshold){
 calculateDistances <- function(r){
    # where r is the raster, processed to have source coded as 1 and target cells as 8888
 
-   require(spatstat.geom)
-   require(maptools)
+   #require(spatstat.geom)
+   #require(maptools)
 
    # convert to spatstat point object with marks (habitat or no)
 
    #points <- spatstat.geom::as.ppp(raster::rasterToPoints(r, spatial = TRUE))   # a ppp objects with marks 8888 (non) or 1 (habitat)
-   points <- as(raster::rasterToPoints(r, spatial = TRUE), "ppp")  # fix bug that occurred Sept2021
+   points <- methods::as(raster::rasterToPoints(r, spatial = TRUE), "ppp")  # fix bug that occurred Sept2021
    plist <- spatstat.geom::split.ppp(points, f = as.factor(points$marks)) # split them
    pointsHab <- plist[[1]]  # the habitat points
    pointsNon <- plist[[2]]  # the 8888 (non habitat) points
@@ -171,7 +171,7 @@ calculateDistances <- function(r){
 #' Distance from Source
 #'
 #' Generate a raster of distances from source(s), restricted to a maximum search distance.
-#' #' @param x the source object(s), as sf polygons
+#' @param x the source object(s), as sf polygons
 #' @param r a template raster of the desired extent and resolution
 #' @param feature feature name for informative messages
 #' @param maxdist distance (m) past which the source is considered not to have an effect
@@ -181,7 +181,7 @@ calculateDistances <- function(r){
 
 distance_from_source  <- function(x, r, feature, maxdist){
 
-   testbox <- sf::st_as_sf(as(raster::extent(r),"SpatialPolygons")) %>%
+   testbox <- sf::st_as_sf(methods::as(raster::extent(r),"SpatialPolygons")) %>%
       sf::st_set_crs(27700)  # creating polygon of the extent of the raster, to check that features are present within
 
 

@@ -124,7 +124,7 @@ demand_noise_reg <- function(x = parent.frame()$mm,
 
    # if mm is stored in list, combine all before proceeding
    if (isTRUE(class(x) == "list")){
-      x <- do.call(rbind, x) %>% st_as_sf()
+      x <- do.call(rbind, x) %>% sf::st_as_sf()
       x <- checkgeometry(x, "POLYGON")
       # NOT using rbindlist here because only keeps the extent of the first tile
    }
@@ -145,7 +145,7 @@ demand_noise_reg <- function(x = parent.frame()$mm,
 
 
    # Create a buffer around the study area (to clip roads with some margin)
-   SAbuffer <- sf::st_buffer(sf::st_geometry(studyArea), 500) %>% sf::st_as_sf() %>% st_transform(27700)
+   SAbuffer <- sf::st_buffer(sf::st_geometry(studyArea), 500) %>% sf::st_as_sf() %>% sf::st_transform(27700)
 
 
    # Create raster with same properties as mastermap to use as a template
@@ -197,7 +197,7 @@ demand_noise_reg <- function(x = parent.frame()$mm,
          checkgeometry()  # buffer and convert to polygon
 
 
-      roadsA <- filter(roads, classification == "Minor Road") %>% # subset of A roads
+      roadsA <- dplyr::filter(roads, classification == "Minor Road") %>% # subset of A roads
          sf::st_buffer(5) %>%
          checkgeometry()  # buffer and convert to polygon
 

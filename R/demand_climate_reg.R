@@ -136,8 +136,8 @@ demand_climate_reg <- function(x = parent.frame()$mm,
    urban <- sf::st_intersection(urban, studyArea) %>%  # clip to study area
       sf::st_buffer(200) %>%  # Buffer by 200 m
       sf::st_make_valid() %>% sf::st_union() %>% sf::st_as_sf() %>%   # flatten and validate
-      mutate(area = as.numeric(sf::st_area(.))/1000000) %>%  # calculate shape area, in km2
-      filter(area > urban_size)  # keep only areas larger than 10km2
+      dplyr::mutate(area = as.numeric(sf::st_area(.))/1000000) %>%  # calculate shape area, in km2
+      dplyr::filter(area > urban_size)  # keep only areas larger than 10km2
 
 
    ## Create template raster

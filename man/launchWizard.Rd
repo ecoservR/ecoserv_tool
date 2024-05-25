@@ -7,6 +7,9 @@ This function launches an interactive app to prompt the user to select data inpu
 \usage{
 launchWizard(projwd = NULL)
 }
+\arguments{
+\item{projwd}{The project working directory; if null, set to current working directory.}
+}
 \value{
 Nothing - but saves an RDS file with the project parameters
 }

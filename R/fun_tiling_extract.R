@@ -47,7 +47,7 @@ prepTiles <- function(mm, vect, studyArea = studyAreaBuffer, value){
 
    # Create polygons representing boxes around each mm tile
    mmex <- lapply(mm, function(x)
-      sf::st_as_sf(as(raster::extent(x), "SpatialPolygons")) %>% sf::st_set_crs(27700))  # list of mm extents
+      sf::st_as_sf(methods::as(raster::extent(x), "SpatialPolygons")) %>% sf::st_set_crs(27700))  # list of mm extents
 
    names(mmex) <- names(mm)  # assign name to tiles
 
@@ -178,7 +178,7 @@ addAttributes <- function(mm, colname, key){
 
    names(key) <- c("ID", "rcode")
    key <- rbind(key, c("8888", NA))  # adding the NA code so can get matched properly
-   key <- as.factor(setNames(key$rcode, key$ID))  # switching key to a named vector format
+   key <- as.factor(stats::setNames(key$rcode, key$ID))  # switching key to a named vector format
 
    # weird punctuation is a tidyverse thing
 

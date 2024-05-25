@@ -28,8 +28,6 @@ demand_pollination(
 \item{runtitle}{A customised title you can give a specific model run, which will be appended to your project title in the outputs. If comparing a basemap to an intervention map, we recommend using "pre" and "post", or a short description of the interventions, e.g. "baseline" vs "tree planting".}
 
 \item{save}{Path to folder where outputs will be saved. By default a folder will be created using your chosen run title, prefixed by "services_". Do not use this argument unless you need to save the outputs somewhere else.}
-
-\item{elev}{A character string giving the name of the basemap attribute containing a polygon's mean elevation. The output raster will be masked to reflect the fact that pollinators are not abundant at high elevations. If the information has not been extracted in the basemap, a DTM can be supplied separately.}
 }
 \value{
 Two rasters with capacity scores: one with raw scores (0-1: likelihood that a pollinator will visit a pixel), and one rescaled 0-100 (where 100 is maximum capacity for the area).

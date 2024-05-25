@@ -8,6 +8,7 @@
 #' Launch Project Setup Wizard
 #' This function launches an interactive app to prompt the user to select data inputs and parameters.
 
+#' @param projwd The project working directory; if null, set to current working directory.
 #' @return Nothing - but saves an RDS file with the project parameters
 #' @export
 launchWizard <- function(projwd = NULL){

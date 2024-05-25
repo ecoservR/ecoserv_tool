@@ -134,11 +134,11 @@ if (export){
       mm <- do.call(rbind, mm)
 
       if (format == "gpkg"){
-         st_write(mm,
+         sf::st_write(mm,
                   dsn = paste0(final_folder, "/", title, "_basemap_final.gpkg"),
                   append = FALSE)
       } else {
-         st_write(mm,
+         sf::st_write(mm,
                   dsn = final_folder,
                   layer = paste0(title, "_basemap_final"),
                   driver = format,
