@@ -12,7 +12,7 @@ check_layers <- function(folder){
                        recursive = TRUE,
                        full.names = TRUE)
 
-   st_layers_V <- Vectorize(st_layers, vectorize.args = "dsn", SIMPLIFY = FALSE)
+   st_layers_V <- Vectorize(sf::st_layers, vectorize.args = "dsn", SIMPLIFY = FALSE)
 
    info <- st_layers_V(files)
    info <- lapply(info, function(x) x$name[x$geomtype %in% c("Polygon", "Multi Polygon")])
