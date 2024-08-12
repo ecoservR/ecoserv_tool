@@ -80,8 +80,8 @@ if (export){
 
 
    ## identify core vs edge tiles
-   SAgrid <- sf::st_set_crs(ecoservR::grid,27700)[
-      lengths(sf::st_intersects(sf::st_set_crs(ecoservR::grid,27700), studyArea))>0,]
+   SAgrid <- sf::st_set_crs(ecoservR:::grid,27700)[
+      lengths(sf::st_intersects(sf::st_set_crs(ecoservR:::grid,27700), studyArea))>0,]
    is_core <- unlist(sf::st_contains(studyArea,SAgrid))
 
    ## Clip where necessary
