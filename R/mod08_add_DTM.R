@@ -88,7 +88,7 @@ add_DTM <- function(mm = parent.frame()$mm,
 
          # we can call the object "grid" directly
 
-         gridSA <- suppressWarnings(sf::st_intersection(sf::st_set_crs(ecoservR::grid, 27700), studyAreaBuffer))  # create gridded study area
+         gridSA <- suppressWarnings(sf::st_intersection(sf::st_set_crs(ecoservR:::grid, 27700), studyAreaBuffer))  # create gridded study area
 
          gridSA$TILE_NAME <- droplevels(gridSA$TILE_NAME)  # drop squares that are not in the study area
 
@@ -127,11 +127,11 @@ add_DTM <- function(mm = parent.frame()$mm,
          rcentro <- do.call(rbind, rcentro)  # make into sf df
 
          # index which grid tiles each raster belongs to (several rasters will belong to one tile)
-         rtiles <- sf::st_intersects(rcentro, sf::st_set_crs(ecoservR::grid, 27700))
+         rtiles <- sf::st_intersects(rcentro, sf::st_set_crs(ecoservR:::grid, 27700))
 
          # add the 10km grid ref as names to the rasters
          # This could crash if a rcentro point is exactly across two tiles, but shouldn't be if dtm from any reputable source
-         names(dtm) <- ecoservR::grid[unlist(rtiles),]$TILE_NAME
+         names(dtm) <- ecoservR:::grid[unlist(rtiles),]$TILE_NAME
 
       } else if (span > 10000){
          # if imported tiles are larger than a 10km tile (unlikely), we just use the old extraction
