@@ -225,6 +225,10 @@ prepare_basemap <- function(projectLog = parent.frame()$projectLog){
       })
 
 
+      ## Harmonise geometry column before binding
+      mm[[i]] <- lapply(mm[[i]], function(x) ecoservR::rename_geometry(x, "geometry"))
+
+
       # Now hopefully all list items are consistent, so can be bound together.
       # There will be many duplicated polygons at this stage (from neighbouring files containing the same straddling polygons) so remove them
       mm[[i]] <- do.call(rbind, mm[[i]])
