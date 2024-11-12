@@ -82,7 +82,7 @@ demand_noise_reg <- function(x = parent.frame()$mm,
 
    ## Initial checks ----
 
-   attributes <- c("HabCode_B", "Group", "housePop", "health")
+   attributes <- c("HabCode_B", "housePop", "health")
 
    # Is the indicator argument an expected value (TRUE or FALSE)?
    if(!is.logical(indicators)) {
