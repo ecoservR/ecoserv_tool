@@ -724,7 +724,7 @@ classif_agri <- function(x){
 
 
                             ## NEW: forest tracks (rides?) in a plantation tend to get assigned B4/J11 - we use corine and the shape ratio to identify them
-                            corine == "Coniferous forest" & shp_index > 5 & HabCode_B == "B4/J11" ~ "J512",
+                            corine %in% c("Coniferous forest", "Transitional woodland-shrub") & shp_index > 5 & HabCode_B == "B4/J11" ~ "J512",
 
                             ## NEW: let's preserve rough grasslands
                             HabCode_B == "Bu" ~ "Bu",
