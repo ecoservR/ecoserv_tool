@@ -261,6 +261,7 @@ classif_mastermap <- function(x, params){
             permute("Boulders","Rock"),
             permute("Boulders (Scattered)","Rock"),
             permute("Boulders","Rock (Scattered)"),
+            permute("Boulders (Scattered)", "Rock (Scattered)"),
             permute("Boulders","Rock"),
             "Boulders (Scattered)")  ~ "I14b",
 
@@ -333,6 +334,10 @@ classif_mastermap <- function(x, params){
             permute("Marsh","Rough Grassland"),
             permute("Marsh","Rough Grassland", "Boulders"),
             permute("Marsh","Rough Grassland", "Boulders (Scattered)"),
+            permute("Marsh","Rough Grassland", "Rock (Scattered)", "Boulders (Scattered)"),
+            permute("Marsh","Rough Grassland", "Rock", "Boulders (Scattered)"),
+            permute("Marsh","Rough Grassland", "Rock (Scattered)", "Boulders"),
+            permute("Marsh","Rough Grassland", "Rock", "Boulders"),
             permute("Marsh","Rough Grassland", "Rock"),
             permute("Marsh","Rough Grassland", "Rock (Scattered)"),
             permute("Marsh", "Rock"),
