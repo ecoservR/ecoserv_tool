@@ -38,20 +38,8 @@ add_greenspace <- function(mm = parent.frame()$mm,
    # OS GREENSPACE
    greenpath <- projectLog$df[projectLog$df$dataset == "OS_Greenspace", ][["path"]]  # path to the OS MasterMap Greenspace data, if available
 
-
-
    # OS OPEN GREENSPACE
    opengreenpath <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["path"]]  # path to OS Open Greenspace (REQUIRED)
-
-   dsname <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["prettynames"]]
-
-   opengreenlayer <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["layer"]] # layer name
-   opengreentype <- guessFiletype(opengreenpath) # data type, automatically determined
-
-   opengreen_cols <- tolower( # make col names lowercase for easier matching
-      projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["cols"]][[1]]
-      ) # coerce to named character (remove list nesting)
-
 
    # DATA IMPORT ---------------------------------------------------------------------------------
 
@@ -162,6 +150,15 @@ add_greenspace <- function(mm = parent.frame()$mm,
 
       # OPEN GREENSPACE CLEANING --------------------------------------------------------------------
 
+      ## Extract info
+      dsname <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["prettynames"]]
+
+      opengreenlayer <- projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["layer"]] # layer name
+      opengreentype <- guessFiletype(opengreenpath) # data type, automatically determined
+
+      opengreen_cols <- tolower( # make col names lowercase for easier matching
+         projectLog$df[projectLog$df$dataset == "OS_OpenGreenspace", ][["cols"]][[1]]
+      ) # coerce to named character (remove list nesting)
 
       # Import the OPEN greenspace map (required)
 
