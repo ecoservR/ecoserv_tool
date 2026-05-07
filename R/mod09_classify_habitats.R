@@ -62,7 +62,7 @@ classify_map <- function(mm = parent.frame()$mm,
    mm <- lapply(mm, function(x) x %>%
                    dplyr::mutate(
                       shp_area = as.numeric(sf::st_area(x)),
-                      shp_length = as.numeric(lwgeom::st_perimeter(x))) %>%
+                      shp_length = as.numeric(sf::st_perimeter(x))) %>%
          # calculate shape index
          dplyr::mutate(
             shp_index = (pi * ((shp_length / (2 * pi)) ^ 2)) / shp_area
