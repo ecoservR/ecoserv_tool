@@ -255,7 +255,7 @@ poly_in_boundary <- function(x, y, layer = NULL){
    if (is.null(layer)){  # for simple datasets with no layer
 
       # identify CRS of the data to be read
-      mycrs <- rgdal::ogrInfo(x)$wkt
+      mycrs <- sf::st_layers(x)$crs[[1]]
 
       if (sf::st_crs(y)$wkt != mycrs){
          y <- sf::st_transform(y, mycrs)  # reproject study area to data's projection
@@ -272,7 +272,7 @@ poly_in_boundary <- function(x, y, layer = NULL){
    } else {  # when we have a layer name
 
       # identify CRS of the data to be read
-      mycrs <- rgdal::ogrInfo(x, layer = layer)$wkt
+      mycrs <- st_layers(x)[st_layers(x)$name == layer,]$crs[[1]]
 
       if (sf::st_crs(y)$wkt != mycrs){
          y <- sf::st_transform(y, mycrs)  # reproject study area to data's projection
