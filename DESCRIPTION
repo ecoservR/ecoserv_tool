@@ -51,6 +51,6 @@ Imports:
     methods,
     tidyselect,
     gtools
-RoxygenNote: 7.2.3
 Depends: 
     R (>= 3.5.0)
+Config/roxygen2/version: 8.0.0
